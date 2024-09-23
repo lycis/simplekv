@@ -2,7 +2,11 @@
 #include <stdio.h>
 #include <time.h>
 
-enum LogLevel { INFO = 0, WARN = 1, ERR = 2, DEBUG = 3, FATAL = 4 };
+enum LogLevel { FATAL = 0, WARN = 1, ERR = 2, INFO = 3, DEBUG = 4,  };
+
+/*** global variables start ***/
+enum LogLevel gl_logLevel = INFO;
+/*** global variables end ***/
 
 void getCurrentTimeString(char *buffer) {
   time_t t = time(NULL);
@@ -33,6 +37,10 @@ const char *getLogLevelAsStr(enum LogLevel l) {
 }
 
 void logMessage(enum LogLevel lvl, const char *message) {
+    if(gl_logLevel < lvl) {
+        return;
+    }
+
 #ifdef WIN64
   char timeStampStr[26];
   getCurrentTimeString(timeStampStr);
@@ -44,6 +52,29 @@ void logMessage(enum LogLevel lvl, const char *message) {
   if (lvl == FATAL) {
     exit(1);
   }
+}
+
+void setLoglevel(const char *lvl) {
+  if (strcmp(lvl, "INFO") == 0) {
+    gl_logLevel = INFO;
+  } else if (strcmp(lvl, "WARN") == 0) {
+    gl_logLevel = WARN;
+  } else if (strcmp(lvl, "ERR") == 0) {
+    gl_logLevel = ERR;
+  } else if (strcmp(lvl, "DEBUG") == 0) {
+    gl_logLevel = DEBUG;
+  } else if (strcmp(lvl, "FATAL") == 0) {
+    gl_logLevel = FATAL;
+  } else {
+    logMessage(WARN, "Unknown log level. Defaulting to INFO.");
+    gl_logLevel = INFO;
+  }
+
+  char logBuffer[1024];
+  sprintf(logBuffer, "Log level set to %s.", getLogLevelAsStr(gl_logLevel));
+  logMessage(INFO, logBuffer);
+
+  return;
 }
 
 SOCKET createSocket() {
@@ -98,6 +129,18 @@ int main(int argc, char **argv) {
   printf("This program is only meant to be run on Windows 64-bit. Other OS are "
          "currently not supported.");
 #else
+
+  if(argc > 1) {
+    if(argc < 3) {
+      logMessage(WARN, "Invalid number of arguments. Usage: server [-l loglevel]");
+      return 1;
+    }
+
+    // check if -l is given and set global log level
+    if(strcmp(argv[1], "-l") == 0) {
+      setLoglevel(argv[2]);
+    }
+  }
 
   logMessage(INFO, "Starting server.");
   SOCKET sock = createSocket();
