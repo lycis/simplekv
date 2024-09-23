@@ -1,11 +1,25 @@
-#include <WinSock2.h>
 #include <stdio.h>
 #include <time.h>
+#include <stdbool.h>
+#include <signal.h>
 
-enum LogLevel { FATAL = 0, WARN = 1, ERR = 2, INFO = 3, DEBUG = 4,  };
+#ifdef WIN64
+#include <WinSock2.h>
+#endif
+
+enum LogLevel {
+  FATAL = 0,
+  WARN = 1,
+  ERR = 2,
+  INFO = 3,
+  DEBUG = 4,
+};
 
 /*** global variables start ***/
-enum LogLevel gl_logLevel = INFO;
+static enum LogLevel gl_logLevel = INFO;
+static volatile bool gl_keepRunning = true;
+static volatile bool gl_cleanedUp = false;
+static SOCKET gl_serverSocket;
 /*** global variables end ***/
 
 void getCurrentTimeString(char *buffer) {
@@ -37,9 +51,9 @@ const char *getLogLevelAsStr(enum LogLevel l) {
 }
 
 void logMessage(enum LogLevel lvl, const char *message) {
-    if(gl_logLevel < lvl) {
-        return;
-    }
+  if (gl_logLevel < lvl) {
+    return;
+  }
 
 #ifdef WIN64
   char timeStampStr[26];
@@ -77,7 +91,7 @@ void setLoglevel(const char *lvl) {
   return;
 }
 
-SOCKET createSocket() {
+void createSocket() {
   WSADATA wsaData = {0};
   int r = WSAStartup(MAKEWORD(2, 2), &wsaData);
   if (r != 0) {
@@ -95,7 +109,8 @@ SOCKET createSocket() {
   }
 
   int enable = 1;
-  r = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const char*) &enable, sizeof(enable));
+  r = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const char *)&enable,
+                 sizeof(enable));
   if (r != 0) {
     char logBuffer[1024];
     sprintf(logBuffer, "Failed to set socket options. Error code: %d",
@@ -104,7 +119,7 @@ SOCKET createSocket() {
   }
 
   logMessage(DEBUG, "Socket created.");
-  return sock;
+  gl_serverSocket = sock;
 }
 
 void bindSocket(SOCKET sock, int port) {
@@ -125,7 +140,7 @@ void bindSocket(SOCKET sock, int port) {
   }
 
   r = listen(sock, SOMAXCONN);
-  if(r != 0) {
+  if (r != 0) {
     memset(logBuffer, 0, sizeof(logBuffer));
     sprintf(logBuffer, "Failed to listen on socket. Error code: %d",
             WSAGetLastError());
@@ -134,29 +149,76 @@ void bindSocket(SOCKET sock, int port) {
   logMessage(INFO, "Listening on 0.0.0.0:8080");
 }
 
+void handleConnections(SOCKET serverSocket) {
+  char logBuffer[1024];
+  while (gl_keepRunning) {
+    struct sockaddr_in clientAddr;
+    size_t clientAddrSize = sizeof(clientAddr);
+    SOCKET clientSocket = accept(serverSocket, (struct sockaddr *)&clientAddr,
+                                 (int *)&clientAddrSize);
+    if (clientSocket == INVALID_SOCKET) {
+      int errorCode = WSAGetLastError();
+      if(errorCode == WSAEINTR) {
+        logMessage(INFO, "Received interrupt signal. Cancelling accepting new connections.");
+        break;
+      }
+      sprintf(logBuffer, "Failed to accept connection. Error code: %d",
+              WSAGetLastError());
+      logMessage(ERR, logBuffer);
+      return;
+    }
+
+    memset(logBuffer, 0, sizeof(logBuffer));
+    sprintf(logBuffer, "Accepted connection from %s:%d",
+            inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port));
+    logMessage(DEBUG, logBuffer);
+  }
+  return;
+}
+
+void cleanUp() {
+    if(gl_cleanedUp) {
+        return;
+    }
+    closesocket(gl_serverSocket);
+    WSACleanup();
+    gl_cleanedUp = true;
+    logMessage(INFO, "Graceful clean up done.");
+    return;
+}
+
+void handleInterrupt(int signal) {
+  logMessage(INFO, "Received interrupt signal. Shutting down server.");
+  gl_keepRunning = false;
+  cleanUp();
+}
+
 int main(int argc, char **argv) {
 #ifndef WIN64
   printf("This program is only meant to be run on Windows 64-bit. Other OS are "
          "currently not supported.");
 #else
 
-  if(argc > 1) {
-    if(argc < 3) {
-      logMessage(WARN, "Invalid number of arguments. Usage: server [-l loglevel]");
+  signal(SIGINT, handleInterrupt);
+
+  if (argc > 1) {
+    if (argc < 3) {
+      logMessage(WARN,
+                 "Invalid number of arguments. Usage: server [-l loglevel]");
       return 1;
     }
 
     // check if -l is given and set global log level
-    if(strcmp(argv[1], "-l") == 0) {
+    if (strcmp(argv[1], "-l") == 0) {
       setLoglevel(argv[2]);
     }
   }
 
   logMessage(INFO, "Starting server.");
-  SOCKET sock = createSocket();
-  bindSocket(sock, 8080);
-
-
+  createSocket();
+  bindSocket(gl_serverSocket, 8080);
+  handleConnections(gl_serverSocket);
+  cleanUp();
   logMessage(INFO, "Server shutdown complete.");
 
 #endif
