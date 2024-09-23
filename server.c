@@ -190,10 +190,20 @@ void handleConnections(SOCKET serverSocket) {
       memset(logBuffer, 0, sizeof(logBuffer));
       sprintf(logBuffer, "Received GET request for key: %s", req.key);
       logMessage(INFO, logBuffer);
+      
+      // send a dummy value for now
+      char *response = "dummy_value";
+      send(clientSocket, response, strlen(response), 0);
+
     } else if (strcmp(req.operation, "PUT") == 0) {
       memset(logBuffer, 0, sizeof(logBuffer));
       sprintf(logBuffer, "Received PUT request for key: %s and value: %s", req.key, req.value);
       logMessage(INFO, logBuffer);
+
+      // always send ACK <key> for now
+      char response[1024] = {0};
+      sprintf(response, "ACK %s", req.key);
+      send(clientSocket, response, strlen(response), 0);
     } else {
       logMessage(WARN, "Received unknown request.");
     }
