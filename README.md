@@ -1,6 +1,6 @@
 # SimpleKV
 
-SimpleKV is a very basic key-value store server, similar in concept to Redis but designed to be much simpler and "dumber." It provides a minimalistic implementation of a key-value store written in C, with both a server and client. SimpleKV operates using a basic, single-threaded protocol for demonstration purposes.
+SimpleKV is a very basic key-value store server, similar in concept to Redis but designed to be much simpler and "dumber". It provides a minimalistic implementation of a key-value store written in C, with both a server and client. SimpleKV operates using a basic, single-threaded protocol for demonstration purposes.
 
 ## Purpose
 
@@ -95,22 +95,22 @@ Once connected to the server (via Telnet, Netcat, or the SimpleKV client), you c
 
 - **Store a value (PUT request):**
     ```
-    PUT key value
+    PUT <len>:key <len>:value
     ```
 
     Example:
     ```
-    PUT mykey myvalue
+    PUT 5:mykey 7:myvalue
     ```
 
 - **Retrieve a value (GET request):**
     ```
-    GET key
+    GET <len>:key
     ```
 
     Example:
     ```
-    GET mykey
+    GET 5:mykey
     ```
 
 ## Compiling and Installing
