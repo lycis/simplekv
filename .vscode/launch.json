@@ -1,10 +1,10 @@
 {
     "configurations": [
       {
-        "name": "(clang64) build and debug main.exe",
+        "name": "(clang64) build and debug server.exe",
         "type": "cppdbg",
         "request": "launch",
-        "program": "${workspaceFolder}\\dist\\main.exe",
+        "program": "${workspaceFolder}\\dist\\server.exe",
         "args": ["-l", "DEBUG"],
         "stopAtEntry": false,
         "cwd": "${fileDirname}",

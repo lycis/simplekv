@@ -7,9 +7,9 @@
         "args": [
           "-fdiagnostics-color=always",
           "-g",
-          "${workspaceFolder}\\main.c",
+          "${workspaceFolder}\\server.c",
           "-o",
-          "${workspaceFolder}\\dist\\\\main.exe",
+          "${workspaceFolder}\\dist\\\\server.exe",
           "-lws2_32"
         ],
         "options": {
