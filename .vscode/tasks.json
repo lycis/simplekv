@@ -2,7 +2,7 @@
     "tasks": [
       {
         "type": "cppbuild",
-        "label": "C/C++: clang64.exe build main",
+        "label": "build win64 server",
         "command": "C:\\msys64\\clang64\\bin\\clang.exe",
         "args": [
           "-fdiagnostics-color=always",
@@ -10,6 +10,27 @@
           "${workspaceFolder}\\server.c",
           "-o",
           "${workspaceFolder}\\dist\\\\server.exe",
+          "-lws2_32"
+        ],
+        "options": {
+          "cwd": "${fileDirname}"
+        },
+        "problemMatcher": ["$gcc"],
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        },
+      },
+      {
+        "type": "cppbuild",
+        "label": "build win64 client",
+        "command": "C:\\msys64\\clang64\\bin\\clang.exe",
+        "args": [
+          "-fdiagnostics-color=always",
+          "-g",
+          "${workspaceFolder}\\client.c",
+          "-o",
+          "${workspaceFolder}\\dist\\\\client.exe",
           "-lws2_32"
         ],
         "options": {

@@ -1,3 +1,4 @@
+#include "kvstrprotocol.h"
 #include <stdio.h>
 #include <time.h>
 #include <stdbool.h>
@@ -172,6 +173,32 @@ void handleConnections(SOCKET serverSocket) {
     sprintf(logBuffer, "Accepted connection from %s:%d",
             inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port));
     logMessage(DEBUG, logBuffer);
+
+    char buffer[2048] = {0};
+    int r = recv(clientSocket, buffer, sizeof(buffer), 0);
+    if (r == SOCKET_ERROR) {
+      sprintf(logBuffer, "Failed to receive data. Error code: %d",
+              WSAGetLastError());
+      logMessage(ERR, logBuffer);
+      closesocket(clientSocket);
+      return;
+    }
+
+    struct kvstr_request req;
+    kvstr_parse_request(buffer, &req);
+    if (strcmp(req.operation, "GET") == 0) {
+      memset(logBuffer, 0, sizeof(logBuffer));
+      sprintf(logBuffer, "Received GET request for key: %s", req.key);
+      logMessage(INFO, logBuffer);
+    } else if (strcmp(req.operation, "PUT") == 0) {
+      memset(logBuffer, 0, sizeof(logBuffer));
+      sprintf(logBuffer, "Received PUT request for key: %s and value: %s", req.key, req.value);
+      logMessage(INFO, logBuffer);
+    } else {
+      logMessage(WARN, "Received unknown request.");
+    }
+    free_kvstr_request(&req);
+    closesocket(clientSocket);
   }
   return;
 }
