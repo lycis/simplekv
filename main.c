@@ -108,19 +108,29 @@ SOCKET createSocket() {
 }
 
 void bindSocket(SOCKET sock, int port) {
+  char logBuffer[1024];
+  int r;
+
   struct sockaddr_in addr = {0};
   addr.sin_family = AF_INET;
   addr.sin_port = htons(port);
   addr.sin_addr.s_addr = INADDR_ANY;
 
-  int r = bind(sock, (struct sockaddr *)&addr, sizeof(addr));
+  r = bind(sock, (struct sockaddr *)&addr, sizeof(addr));
   if (r == SOCKET_ERROR) {
-    char logBuffer[1024];
+    memset(logBuffer, 0, sizeof(logBuffer));
     sprintf(logBuffer, "Failed to bind socket. Error code: %d",
             WSAGetLastError());
     logMessage(FATAL, logBuffer);
   }
 
+  r = listen(sock, SOMAXCONN);
+  if(r != 0) {
+    memset(logBuffer, 0, sizeof(logBuffer));
+    sprintf(logBuffer, "Failed to listen on socket. Error code: %d",
+            WSAGetLastError());
+    logMessage(FATAL, logBuffer);
+  }
   logMessage(INFO, "Listening on 0.0.0.0:8080");
 }
 
@@ -145,6 +155,8 @@ int main(int argc, char **argv) {
   logMessage(INFO, "Starting server.");
   SOCKET sock = createSocket();
   bindSocket(sock, 8080);
+
+
   logMessage(INFO, "Server shutdown complete.");
 
 #endif
