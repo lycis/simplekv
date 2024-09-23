@@ -15,7 +15,7 @@ The primary goal of this project is to offer a lightweight, network-enabled key-
 
 ## Disclaimer
 
-**Windows Only:** Currently, SimpleKV is implemented using Winsock for socket programming, so it works exclusively on Windows systems.
+**Windows Only:** Currently, SimpleKV is implemented using WinSock2 for socket programming, so it works exclusively on Windows systems.
 
 ## Project Structure
 
