@@ -52,6 +52,23 @@ char* kvstr_build_put_request(const char* key, const char* value) {
     return request;  // Caller is responsible for freeing the memory
 }
 
+char* kvstr_build_del_request(const char* key) {
+    // Format: DEL <key_len:string><key:string>\0
+    int key_len = strlen(key);
+    int msg_len = 4 + 4 + key_len + 1;  // "DEL " (4 chars) + key_len + '\0'
+    
+    char* request = malloc(msg_len);
+    if (request == NULL) {
+        return NULL;  // Handle malloc failure
+    }
+    
+    // Format the string as "DEL <key>"
+    snprintf(request, msg_len, "DEL %s", key);
+    
+    return request;  // Return the serialized request
+}
+
+
 
 struct kvstr_request {
     char* key;
@@ -165,6 +182,19 @@ void free_kvstr_request(struct kvstr_request* req) {
     if (req->value != NULL) {
         free(req->value);
     }
+}
+
+struct kvstr_request* create_kvstr_request() {
+    struct kvstr_request* req = (struct kvstr_request*)malloc(sizeof(struct kvstr_request));
+    if (req == NULL) {
+        return NULL;  // Memory allocation failure
+    }
+
+    req->operation = NULL;
+    req->key = NULL;
+    req->value = NULL;
+
+    return req;
 }
 
 #endif

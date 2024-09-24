@@ -31,7 +31,7 @@
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}\\dist\\client.exe",
-        "args": ["localhost", "8080", "PUT", "key1", "value1"],
+        "args": ["localhost", "8080", "DEL", "key1"],
         "stopAtEntry": false,
         "cwd": "${fileDirname}",
         "environment": [],

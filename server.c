@@ -23,6 +23,17 @@ static volatile bool gl_cleanedUp = false;
 static SOCKET gl_serverSocket;
 /*** global variables end ***/
 
+/*** prototypes ***/
+void handleConnections(SOCKET serverSocket);
+SOCKET acceptClientConnection(SOCKET serverSocket, char* logBuffer, size_t logBufferSize);
+void handleAcceptError(char* logBuffer, size_t logBufferSize);
+int receiveData(SOCKET clientSocket, char* buffer, size_t bufferSize, char* logBuffer, size_t logBufferSize);
+void processClientRequest(SOCKET clientSocket, char* buffer, char* logBuffer, size_t logBufferSize);
+void handleGetRequest(SOCKET clientSocket, const char* key, char* logBuffer, size_t logBufferSize);
+void handlePutRequest(SOCKET clientSocket, const char* key, const char* value, char* logBuffer, size_t logBufferSize);
+void handleDelRequest(SOCKET clientSocket, const char* key, char* logBuffer, size_t logBufferSize);
+
+
 void getCurrentTimeString(char *buffer) {
   time_t t = time(NULL);
   struct tm buf;
@@ -151,66 +162,110 @@ void bindSocket(SOCKET sock, int port) {
 }
 
 void handleConnections(SOCKET serverSocket) {
-  char logBuffer[1024];
-  while (gl_keepRunning) {
+    char logBuffer[1024];
+    
+    // Main loop for accepting connections
+    while (gl_keepRunning) {
+        SOCKET clientSocket = acceptClientConnection(serverSocket, logBuffer, sizeof(logBuffer));
+        if (clientSocket == INVALID_SOCKET) {
+            continue;  // If accept fails, continue to the next iteration
+        }
+
+        char buffer[2048] = {0};
+        if (receiveData(clientSocket, buffer, sizeof(buffer), logBuffer, sizeof(logBuffer)) == SOCKET_ERROR) {
+            closesocket(clientSocket);
+            continue;  // Move to the next iteration in case of receiving error
+        }
+
+        // Process the request
+        processClientRequest(clientSocket, buffer, logBuffer, sizeof(logBuffer));
+
+        // Close the client connection
+        closesocket(clientSocket);
+    }
+}
+
+SOCKET acceptClientConnection(SOCKET serverSocket, char* logBuffer, size_t logBufferSize) {
     struct sockaddr_in clientAddr;
     size_t clientAddrSize = sizeof(clientAddr);
-    SOCKET clientSocket = accept(serverSocket, (struct sockaddr *)&clientAddr,
-                                 (int *)&clientAddrSize);
+
+    SOCKET clientSocket = accept(serverSocket, (struct sockaddr*)&clientAddr, (int*)&clientAddrSize);
     if (clientSocket == INVALID_SOCKET) {
-      int errorCode = WSAGetLastError();
-      if(errorCode == WSAEINTR) {
-        logMessage(INFO, "Received interrupt signal. Cancelling accepting new connections.");
-        break;
-      }
-      sprintf(logBuffer, "Failed to accept connection. Error code: %d",
-              WSAGetLastError());
-      logMessage(ERR, logBuffer);
-      return;
+        handleAcceptError(logBuffer, logBufferSize);
+        return INVALID_SOCKET;
     }
 
-    memset(logBuffer, 0, sizeof(logBuffer));
-    sprintf(logBuffer, "Accepted connection from %s:%d",
-            inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port));
+    // Log successful connection
+    snprintf(logBuffer, logBufferSize, "Accepted connection from %s:%d",
+             inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port));
     logMessage(DEBUG, logBuffer);
 
-    char buffer[2048] = {0};
-    int r = recv(clientSocket, buffer, sizeof(buffer), 0);
-    if (r == SOCKET_ERROR) {
-      sprintf(logBuffer, "Failed to receive data. Error code: %d",
-              WSAGetLastError());
-      logMessage(ERR, logBuffer);
-      closesocket(clientSocket);
-      return;
-    }
+    return clientSocket;
+}
 
-    struct kvstr_request req;
-    kvstr_parse_request(buffer, &req);
-    if (strcmp(req.operation, "GET") == 0) {
-      memset(logBuffer, 0, sizeof(logBuffer));
-      sprintf(logBuffer, "Received GET request for key: %s", req.key);
-      logMessage(INFO, logBuffer);
-      
-      // send a dummy value for now
-      char *response = "dummy_value";
-      send(clientSocket, response, strlen(response), 0);
-
-    } else if (strcmp(req.operation, "PUT") == 0) {
-      memset(logBuffer, 0, sizeof(logBuffer));
-      sprintf(logBuffer, "Received PUT request for key: %s and value: %s", req.key, req.value);
-      logMessage(INFO, logBuffer);
-
-      // always send ACK <key> for now
-      char response[1024] = {0};
-      sprintf(response, "ACK %s", req.key);
-      send(clientSocket, response, strlen(response), 0);
+void handleAcceptError(char* logBuffer, size_t logBufferSize) {
+    int errorCode = WSAGetLastError();
+    if (errorCode == WSAEINTR) {
+        logMessage(INFO, "Received interrupt signal. Stopping new connections.");
     } else {
-      logMessage(WARN, "Received unknown request.");
+        snprintf(logBuffer, logBufferSize, "Failed to accept connection. Error code: %d", errorCode);
+        logMessage(ERR, logBuffer);
     }
-    free_kvstr_request(&req);
-    closesocket(clientSocket);
-  }
-  return;
+}
+
+int receiveData(SOCKET clientSocket, char* buffer, size_t bufferSize, char* logBuffer, size_t logBufferSize) {
+    int receivedBytes = recv(clientSocket, buffer, bufferSize, 0);
+    if (receivedBytes == SOCKET_ERROR) {
+        snprintf(logBuffer, logBufferSize, "Failed to receive data. Error code: %d", WSAGetLastError());
+        logMessage(ERR, logBuffer);
+    }
+    return receivedBytes;
+}
+
+void processClientRequest(SOCKET clientSocket, char* buffer, char* logBuffer, size_t logBufferSize) {
+    struct kvstr_request* req = create_kvstr_request();
+    kvstr_parse_request(buffer, req);
+
+    if (strcmp(req->operation, "GET") == 0) {
+        handleGetRequest(clientSocket, req->key, logBuffer, logBufferSize);
+    } else if (strcmp(req->operation, "PUT") == 0) {
+        handlePutRequest(clientSocket, req->key, req->value, logBuffer, logBufferSize);
+    } else if (strcmp(req->operation, "DEL") == 0) {
+        handleDelRequest(clientSocket, req->key, logBuffer, logBufferSize);
+    } else {
+        logMessage(WARN, "Received unknown request.");
+    }
+
+    free_kvstr_request(req);
+}
+
+void handleGetRequest(SOCKET clientSocket, const char* key, char* logBuffer, size_t logBufferSize) {
+    snprintf(logBuffer, logBufferSize, "Received GET request for key: %s", key);
+    logMessage(INFO, logBuffer);
+
+    // Send a dummy value for now
+    const char* response = "dummy_value";
+    send(clientSocket, response, strlen(response), 0);
+}
+
+void handlePutRequest(SOCKET clientSocket, const char* key, const char* value, char* logBuffer, size_t logBufferSize) {
+    snprintf(logBuffer, logBufferSize, "Received PUT request for key: %s and value: %s", key, value);
+    logMessage(INFO, logBuffer);
+
+    // Send an acknowledgment
+    char response[1024];
+    snprintf(response, sizeof(response), "PUT %s", key);
+    send(clientSocket, response, strlen(response), 0);
+}
+
+void handleDelRequest(SOCKET clientSocket, const char* key, char* logBuffer, size_t logBufferSize) {
+    snprintf(logBuffer, logBufferSize, "Received DEL request for key: %s", key);
+    logMessage(INFO, logBuffer);
+
+    // Confirm deletion (dummy implementation for now)
+    char response[1024];
+    snprintf(response, sizeof(response), "DEL %s", key);
+    send(clientSocket, response, strlen(response), 0);
 }
 
 void cleanUp() {
