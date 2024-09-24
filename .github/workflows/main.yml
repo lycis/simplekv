@@ -6,7 +6,7 @@ jobs:
     runs-on: windows-latest
     defaults:
       run:
-        shell: CLANG64 {0}
+        shell: clang64 {0}
     steps:
       - uses: actions/checkout@v3
       - uses: msys2/setup-msys2@v2
