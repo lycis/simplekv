@@ -2,7 +2,7 @@
 
 SimpleKV is a very basic key-value store server, similar in concept to Redis but designed to be much simpler and "dumber". It provides a minimalistic implementation of a key-value store written in C, with both a server and client. SimpleKV operates using a basic, single-threaded protocol for demonstration purposes.
 
-Check out the protocol used between client and server in [PROTOCOL.md]. It also contains an example of how to implement your own client using the provided `kvstrprotocol.h` functions.
+Check out the protocol used between client and server in [PROTOCOL](PROTOCOL.md). It also contains an example of how to implement your own client using the provided `kvstrprotocol.h` functions.
 
 ## Purpose
 
