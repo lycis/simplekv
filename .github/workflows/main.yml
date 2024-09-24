@@ -6,7 +6,7 @@ jobs:
     runs-on: windows-latest
     defaults:
       run:
-        shell: clang64 {0}
+        shell: msys2 {0}
     steps:
       - uses: actions/checkout@v3
       - uses: msys2/setup-msys2@v2
@@ -16,6 +16,6 @@ jobs:
           install: git mingw-w64-x86_64-clang
       - name: build server
         run: |
-          ls
+          ls /
           clang -fdiagnostics-color=always -g server.c -o server.exe -lws2_32
           
