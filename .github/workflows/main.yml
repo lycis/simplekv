@@ -1,0 +1,19 @@
+name: Build SimpleKV
+on: [push, pull_request]
+
+jobs:
+  msys2-clang64:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: clang64
+          update: true
+          install: git mingw-w64-x86_64-clang
+      - name: build server
+        run: clang -fdiagnostics-color=always -g server.c -o server.exe -lws2_32
+          
