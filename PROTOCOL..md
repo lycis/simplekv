@@ -100,3 +100,76 @@ Client                            Server
   | <------ 404 Key not found ------- |  // Server responds with 'key not found' message
   |                                  |
 ```
+## Implementing Your Own Client
+
+Any client capable of sending plain text following the protocol outlined above should be compatible with the `simplekv` server. Whether you're writing a client in C, Python, or any other language, as long as you adhere to the request structure, the server will process your commands.
+
+To make the process easier, the project includes a header file, `kvstrprotocol.h`, which provides functions and structs to help you format requests correctly. You can use this header to quickly implement your own client without worrying about manual string formatting.
+
+### Using `kvstrprotocol.h`
+
+When you include `kvstrprotocol.h` in your client code, the following functions are available to help you build the required requests:
+
+- **`char* kvstr_build_get_request(const char* key)`**  
+  Creates a properly formatted plain text request for a `GET` operation.
+  ```c
+  char* request = kvstr_build_get_request("akey");
+  send(clientSocket, request, strlen(request), 0);
+  ```
+  
+- **`char* kvstr_build_put_request(const char* key, const char* value)`**  
+  Creates a plain text request for a `PUT` operation, storing `value` under `key`.
+  ```c
+  char* request = kvstr_build_put_request("akey", "keyvalue");
+  send(clientSocket, request, strlen(request), 0);
+  ```
+
+- **`char* kvstr_build_del_request(const char* key)`**  
+  Constructs a request to delete a key using the `DEL` operation.
+  ```c
+  char* request = kvstr_build_del_request("akey");
+  send(clientSocket, request, strlen(request), 0);
+  ```
+
+These functions handle the formatting for you, following the `<operation> <arglen1>:<argvalue1> ...` protocol. You just need to pass in the appropriate `key` and `value` strings, and they will output a properly formatted request.
+
+### Example: Writing a Simple Client
+
+Here’s an example of how you could write a simple client in C using the provided functions from `kvstrprotocol.h`:
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "kvstrprotocol.h"
+
+int main() {
+    // Initialize connection to server (code not shown for brevity)
+    
+    // Example GET request
+    char* getRequest = kvstr_build_get_request("akey");
+    send(clientSocket, getRequest, strlen(getRequest), 0);
+    
+    // Receive response from the server
+    char response[1024];
+    recv(clientSocket, response, sizeof(response), 0);
+    printf("Server response: %s\n", response);
+    
+    // Example PUT request
+    char* putRequest = kvstr_build_put_request("akey", "keyvalue");
+    send(clientSocket, putRequest, strlen(putRequest), 0);
+    
+    // Receive response from the server
+    recv(clientSocket, response, sizeof(response), 0);
+    printf("Server response: %s\n", response);
+
+    // Free any allocated memory if needed
+    free(getRequest);
+    free(putRequest);
+    
+    // Close connection (code not shown)
+    return 0;
+}
+```
+
+This example demonstrates how easy it is to interact with the `simplekv` server when using the provided utility functions. You can adapt this approach to any programming language or environment, as long as you ensure that your client sends and receives plaintext messages conforming to the protocol.

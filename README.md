@@ -2,6 +2,8 @@
 
 SimpleKV is a very basic key-value store server, similar in concept to Redis but designed to be much simpler and "dumber". It provides a minimalistic implementation of a key-value store written in C, with both a server and client. SimpleKV operates using a basic, single-threaded protocol for demonstration purposes.
 
+Check out the protocol used between client and server in [PROTOCOL.md]. It also contains an example of how to implement your own client using the provided `kvstrprotocol.h` functions.
+
 ## Purpose
 
 The primary goal of this project is to offer a lightweight, network-enabled key-value store, mainly for quick and easy sharing of state between simple services. **This project should not be used in production or any secure environments.** It was originally written as an exercise to improve my C programming skills, but has since become a useful tool whenever I need a simple, lean, and fast distributed key-value store.
@@ -30,6 +32,7 @@ To build and run this project, you will need:
 - Winsock library (`-lws2_32` for linking)
 
 ## Installation & Compilation
+The project only consists of two primary C files: `server.c` and `client.c`. Both applications are self-ccontained within their files. There are no dependencies other than the Winsock library (`-lws2_32`) for networking. So building is simple:
 
 1. **Clone the repository:**
     ```sh
@@ -88,22 +91,6 @@ If you compiled the `client.c`, you can use the SimpleKV client to interact with
     ./client localhost 8080 get akey # returns '200 keyvalue' from the server (or 404 Not Found)
     ./client localhost 8080 del akey # returns `200 Key deleted` and removes the stored value
     ```
-
-## Compiling and Installing
-
-The project only consists of two primary C files: `server.c` and `client.c`. Both applications are self-ccontained within their files, so building is simple:
-
-1. **Compile the server:**
-    ```sh
-    gcc -o server server.c -lws2_32
-    ```
-
-2. **Compile the client (optional):**
-    ```sh
-    gcc -o client client.c -lws2_32
-    ```
-
-There are no dependencies other than the Winsock library (`-lws2_32`) for networking.
 
 ## Contributing
 

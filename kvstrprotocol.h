@@ -73,40 +73,4 @@ char* kvstr_build_del_request(const char* key) {
     return request;  // Caller is responsible for freeing the memory
 }
 
-
-
-struct kvstr_request {
-    char* key;
-    char* value;
-    char* operation;
-};
-
-void free_kvstr_request(struct kvstr_request* req) {
-    if (req->operation != NULL) {
-        free(req->operation);
-        req->operation = NULL;
-    }
-    if (req->key != NULL) {
-        free(req->key);
-        req->key = NULL;
-    }
-    if (req->value != NULL) {
-        free(req->value);
-        req->value = NULL;
-    }
-}
-
-struct kvstr_request* create_kvstr_request() {
-    struct kvstr_request* req = (struct kvstr_request*)malloc(sizeof(struct kvstr_request));
-    if (req == NULL) {
-        return NULL;  // Memory allocation failure
-    }
-
-    req->operation = NULL;
-    req->key = NULL;
-    req->value = NULL;
-
-    return req;
-}
-
 #endif
