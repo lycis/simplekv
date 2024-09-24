@@ -9,7 +9,7 @@ The primary goal of this project is to offer a lightweight, network-enabled key-
 ## Features
 
 - **Single-threaded server:** Handles requests one at a time.
-- **Basic protocol:** Supports simple `PUT` and `GET` operations.
+- **Basic protocol:** Supports simple `PUT`, `GET` and `DEL` operations.
 - **Configurable log levels:** Control log verbosity using command-line arguments.
 - **Command-line client:** Provides a minimal interface for interacting with the server.
 
@@ -54,6 +54,7 @@ To build and run this project, you will need:
 This will generate the server and client executables (`server.exe` and `client.exe`).
 
 ## Usage
+See the [PROTOCOL](PROTOCOL.md) for a description of the communication protocol used between the `simplekv` server and any client.
 
 ### Starting the Server
 
@@ -64,8 +65,7 @@ This will generate the server and client executables (`server.exe` and `client.e
 
    By default, the server listens on port `8080`.
 
-2. **Set the log level:**
-   The log level can be controlled with the `-l` argument followed by one of the log levels: `ERR`, `INFO`, `DEBUG`, `WARN`, `FATAL`. For example:
+   The log level can be controlled with the `-l` argument followed by one of the log levels: `ERR`, `INFO`, `DEBUG`, `WARN`, `FATAL`. By default the log level will be set to `INFO`. For example:
     ```sh
     ./server -l DEBUG
     ```
@@ -84,38 +84,14 @@ If you compiled the `client.c`, you can use the SimpleKV client to interact with
 
 1. **Run the client:**
     ```sh
-    ./client
-    ```
-
-   This will connect to the server running on `localhost:8080`.
-
-### Example Commands
-
-Once connected to the server (via Telnet, Netcat, or the SimpleKV client), you can use the following commands:
-
-- **Store a value (PUT request):**
-    ```
-    PUT <len>:key <len>:value
-    ```
-
-    Example:
-    ```
-    PUT 5:mykey 7:myvalue
-    ```
-
-- **Retrieve a value (GET request):**
-    ```
-    GET <len>:key
-    ```
-
-    Example:
-    ```
-    GET 5:mykey
+    ./client localhost 8080 put akey keyvalue # store a value on the server
+    ./client localhost 8080 get akey # returns '200 keyvalue' from the server (or 404 Not Found)
+    ./client localhost 8080 del akey # returns `200 Key deleted` and removes the stored value
     ```
 
 ## Compiling and Installing
 
-The project only consists of two primary C files: `server.c` and `client.c`. To build:
+The project only consists of two primary C files: `server.c` and `client.c`. Both applications are self-ccontained within their files, so building is simple:
 
 1. **Compile the server:**
     ```sh

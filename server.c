@@ -1,8 +1,9 @@
 #include "kvstrprotocol.h"
+#include <signal.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <time.h>
-#include <stdbool.h>
-#include <signal.h>
+
 
 #ifdef WIN64
 #include <WinSock2.h>
@@ -25,14 +26,25 @@ static SOCKET gl_serverSocket;
 
 /*** prototypes ***/
 void handleConnections(SOCKET serverSocket);
-SOCKET acceptClientConnection(SOCKET serverSocket, char* logBuffer, size_t logBufferSize);
-void handleAcceptError(char* logBuffer, size_t logBufferSize);
-int receiveData(SOCKET clientSocket, char* buffer, size_t bufferSize, char* logBuffer, size_t logBufferSize);
-void processClientRequest(SOCKET clientSocket, char* buffer, char* logBuffer, size_t logBufferSize);
-void handleGetRequest(SOCKET clientSocket, const char* key, char* logBuffer, size_t logBufferSize);
-void handlePutRequest(SOCKET clientSocket, const char* key, const char* value, char* logBuffer, size_t logBufferSize);
-void handleDelRequest(SOCKET clientSocket, const char* key, char* logBuffer, size_t logBufferSize);
-
+SOCKET acceptClientConnection(SOCKET serverSocket, char *logBuffer,
+                              size_t logBufferSize);
+void handleAcceptError(char *logBuffer, size_t logBufferSize);
+int receiveData(SOCKET clientSocket, char *buffer, size_t bufferSize,
+                char *logBuffer, size_t logBufferSize);
+void processClientRequest(SOCKET clientSocket, char *buffer, char *logBuffer,
+                          size_t logBufferSize);
+void handleGetRequest(SOCKET clientSocket, const char *key, char *logBuffer,
+                      size_t logBufferSize);
+void handlePutRequest(SOCKET clientSocket, const char *key, const char *value,
+                      char *logBuffer, size_t logBufferSize);
+void handleDelRequest(SOCKET clientSocket, const char *key, char *logBuffer,
+                      size_t logBufferSize);
+int parse_value(const char *after_key_ptr, struct kvstr_request *result);
+int kvstr_parse_request(const char *request_str, struct kvstr_request *result);
+const char *parse_operation(const char *request_str,
+                            struct kvstr_request *result);
+const char *parse_key(const char *after_op_ptr, struct kvstr_request *result);
+/*** protoypes end */
 
 void getCurrentTimeString(char *buffer) {
   time_t t = time(NULL);
@@ -162,121 +174,259 @@ void bindSocket(SOCKET sock, int port) {
 }
 
 void handleConnections(SOCKET serverSocket) {
-    char logBuffer[1024];
-    
-    // Main loop for accepting connections
-    while (gl_keepRunning) {
-        SOCKET clientSocket = acceptClientConnection(serverSocket, logBuffer, sizeof(logBuffer));
-        if (clientSocket == INVALID_SOCKET) {
-            continue;  // If accept fails, continue to the next iteration
-        }
+  char logBuffer[1024];
 
-        char buffer[2048] = {0};
-        if (receiveData(clientSocket, buffer, sizeof(buffer), logBuffer, sizeof(logBuffer)) == SOCKET_ERROR) {
-            closesocket(clientSocket);
-            continue;  // Move to the next iteration in case of receiving error
-        }
-
-        // Process the request
-        processClientRequest(clientSocket, buffer, logBuffer, sizeof(logBuffer));
-
-        // Close the client connection
-        closesocket(clientSocket);
-    }
-}
-
-SOCKET acceptClientConnection(SOCKET serverSocket, char* logBuffer, size_t logBufferSize) {
-    struct sockaddr_in clientAddr;
-    size_t clientAddrSize = sizeof(clientAddr);
-
-    SOCKET clientSocket = accept(serverSocket, (struct sockaddr*)&clientAddr, (int*)&clientAddrSize);
+  // Main loop for accepting connections
+  while (gl_keepRunning) {
+    SOCKET clientSocket =
+        acceptClientConnection(serverSocket, logBuffer, sizeof(logBuffer));
     if (clientSocket == INVALID_SOCKET) {
-        handleAcceptError(logBuffer, logBufferSize);
-        return INVALID_SOCKET;
+      continue; // If accept fails, continue to the next iteration
     }
 
-    // Log successful connection
-    snprintf(logBuffer, logBufferSize, "Accepted connection from %s:%d",
-             inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port));
-    logMessage(DEBUG, logBuffer);
-
-    return clientSocket;
-}
-
-void handleAcceptError(char* logBuffer, size_t logBufferSize) {
-    int errorCode = WSAGetLastError();
-    if (errorCode == WSAEINTR) {
-        logMessage(INFO, "Received interrupt signal. Stopping new connections.");
-    } else {
-        snprintf(logBuffer, logBufferSize, "Failed to accept connection. Error code: %d", errorCode);
-        logMessage(ERR, logBuffer);
+    char buffer[2048] = {0};
+    if (receiveData(clientSocket, buffer, sizeof(buffer), logBuffer,
+                    sizeof(logBuffer)) == SOCKET_ERROR) {
+      closesocket(clientSocket);
+      continue; // Move to the next iteration in case of receiving error
     }
+
+    // Process the request
+    processClientRequest(clientSocket, buffer, logBuffer, sizeof(logBuffer));
+
+    // Close the client connection
+    closesocket(clientSocket);
+  }
 }
 
-int receiveData(SOCKET clientSocket, char* buffer, size_t bufferSize, char* logBuffer, size_t logBufferSize) {
-    int receivedBytes = recv(clientSocket, buffer, bufferSize, 0);
-    if (receivedBytes == SOCKET_ERROR) {
-        snprintf(logBuffer, logBufferSize, "Failed to receive data. Error code: %d", WSAGetLastError());
-        logMessage(ERR, logBuffer);
+SOCKET acceptClientConnection(SOCKET serverSocket, char *logBuffer,
+                              size_t logBufferSize) {
+  struct sockaddr_in clientAddr;
+  size_t clientAddrSize = sizeof(clientAddr);
+
+  SOCKET clientSocket = accept(serverSocket, (struct sockaddr *)&clientAddr,
+                               (int *)&clientAddrSize);
+  if (clientSocket == INVALID_SOCKET) {
+    handleAcceptError(logBuffer, logBufferSize);
+    return INVALID_SOCKET;
+  }
+
+  // Log successful connection
+  snprintf(logBuffer, logBufferSize, "Accepted connection from %s:%d",
+           inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port));
+  logMessage(DEBUG, logBuffer);
+
+  return clientSocket;
+}
+
+void handleAcceptError(char *logBuffer, size_t logBufferSize) {
+  int errorCode = WSAGetLastError();
+  if (errorCode == WSAEINTR) {
+    logMessage(INFO, "Received interrupt signal. Stopping new connections.");
+  } else {
+    snprintf(logBuffer, logBufferSize,
+             "Failed to accept connection. Error code: %d", errorCode);
+    logMessage(ERR, logBuffer);
+  }
+}
+
+int receiveData(SOCKET clientSocket, char *buffer, size_t bufferSize,
+                char *logBuffer, size_t logBufferSize) {
+  int receivedBytes = recv(clientSocket, buffer, bufferSize, 0);
+  if (receivedBytes == SOCKET_ERROR) {
+    snprintf(logBuffer, logBufferSize, "Failed to receive data. Error code: %d",
+             WSAGetLastError());
+    logMessage(ERR, logBuffer);
+  }
+  return receivedBytes;
+}
+
+int kvstr_parse_request(const char *request_str, struct kvstr_request *result) {
+  if (request_str == NULL || result == NULL) {
+    return -1; // Invalid input
+  }
+
+  result->operation = result->key = result->value = NULL;
+
+  const char *after_op_ptr = parse_operation(request_str, result);
+  if (after_op_ptr == NULL) {
+    return -2; // Failed to parse operation
+  }
+
+
+  const char *after_key_ptr = parse_key(after_op_ptr, result);
+  if (after_key_ptr == NULL) {
+    free_kvstr_request(result);
+    return -3; // Failed to parse key
+  }
+
+  // If this is a PUT request, parse the value
+  if (strcmp(result->operation, "PUT") == 0) {
+    if (parse_value(after_key_ptr, result) == -1) {
+      free_kvstr_request(result);
+      return -4; // Failed to parse value
     }
-    return receivedBytes;
+  }
+
+  return 0; // Success
 }
 
-void processClientRequest(SOCKET clientSocket, char* buffer, char* logBuffer, size_t logBufferSize) {
-    struct kvstr_request* req = create_kvstr_request();
-    kvstr_parse_request(buffer, req);
+// Helper function to parse the operation from the request
+const char *parse_operation(const char *request_str,
+                            struct kvstr_request *result) {
+  const char *space_ptr = strchr(request_str, ' ');
+  if (!space_ptr) {
+    return NULL; // Malformed request (no space found)
+  }
 
+  int operation_len = space_ptr - request_str;
+  result->operation = (char *)malloc(operation_len + 1);
+  if (!result->operation) {
+    return NULL; // Memory allocation failure
+  }
+
+  strncpy(result->operation, request_str, operation_len);
+  result->operation[operation_len] = '\0'; // Null-terminate
+  return space_ptr + 1; // Return pointer to next part of the string
+}
+
+// Helper function to parse the key from the request
+const char *parse_key(const char *after_op_ptr, struct kvstr_request *result) {
+  char *colon_ptr = strchr(after_op_ptr, ':');
+  if (!colon_ptr) {
+    return NULL; // Malformed request (no colon found)
+  }
+
+  int key_len = atoi(after_op_ptr); // Parse key length
+  if (key_len <= 0) {
+    return NULL; // Invalid key length
+  }
+
+  result->key = (char *)malloc(key_len + 1);
+  if (!result->key) {
+    return NULL; // Memory allocation failure
+  }
+
+  const char *key_ptr = colon_ptr + 1;
+  strncpy(result->key, key_ptr, key_len);
+  result->key[key_len] = '\0'; // Null-terminate
+
+  return key_ptr + key_len; // Return pointer to next part of the string
+}
+
+// Helper function to parse the value from the request (for PUT)
+int parse_value(const char *after_key_ptr, struct kvstr_request *result) {
+  if (*after_key_ptr != ' ') {
+    return -1; // Malformed request (no space after key)
+  }
+
+  after_key_ptr++; // Skip the space
+
+  char *value_colon_ptr = strchr(after_key_ptr, ':');
+  if (!value_colon_ptr) {
+    return -1; // Malformed request (no colon found for value)
+  }
+
+  int value_len = atoi(after_key_ptr); // Parse value length
+  if (value_len <= 0) {
+    return -1; // Invalid value length
+  }
+
+  result->value = (char *)malloc(value_len + 1);
+  if (!result->value) {
+    return -1; // Memory allocation failure
+  }
+
+  const char *value_ptr = value_colon_ptr + 1;
+  strncpy(result->value, value_ptr, value_len);
+  result->value[value_len] = '\0'; // Null-terminate
+
+  return 0; // Success
+}
+
+const char *parseError2str(int error) {
+  switch (error) {
+  case -1:
+    return "invalid input";
+  case -2:
+    return "malformed operation";
+  case -3:
+    return "malformed key";
+  case -4:
+    return "malformed value";
+  default:
+    return "Unknown error";
+  }
+}
+
+void processClientRequest(SOCKET clientSocket, char *buffer, char *logBuffer,
+                          size_t logBufferSize) {
+  struct kvstr_request *req = create_kvstr_request();
+
+  int parseRequestError = kvstr_parse_request(buffer, req);
+  if (parseRequestError != 0) {
+    char buffer[1024];
+    snprintf(buffer, sizeof(buffer), "400 Bad Request: %s", parseError2str(parseRequestError));
+    logMessage(ERR, buffer);
+    send(clientSocket, buffer, strlen(buffer), 0);
+  } else {
     if (strcmp(req->operation, "GET") == 0) {
-        handleGetRequest(clientSocket, req->key, logBuffer, logBufferSize);
+      handleGetRequest(clientSocket, req->key, logBuffer, logBufferSize);
     } else if (strcmp(req->operation, "PUT") == 0) {
-        handlePutRequest(clientSocket, req->key, req->value, logBuffer, logBufferSize);
+      handlePutRequest(clientSocket, req->key, req->value, logBuffer, logBufferSize);
     } else if (strcmp(req->operation, "DEL") == 0) {
-        handleDelRequest(clientSocket, req->key, logBuffer, logBufferSize);
+      handleDelRequest(clientSocket, req->key, logBuffer, logBufferSize);
     } else {
-        logMessage(WARN, "Received unknown request.");
+      logMessage(ERR, "Received unknown request.");
     }
+  }
 
-    free_kvstr_request(req);
+  free_kvstr_request(req);
+  return;
 }
 
-void handleGetRequest(SOCKET clientSocket, const char* key, char* logBuffer, size_t logBufferSize) {
-    snprintf(logBuffer, logBufferSize, "Received GET request for key: %s", key);
-    logMessage(INFO, logBuffer);
+void handleGetRequest(SOCKET clientSocket, const char *key, char *logBuffer,
+                      size_t logBufferSize) {
+  snprintf(logBuffer, logBufferSize, "Received GET request for key: %s", key);
+  logMessage(INFO, logBuffer);
 
-    // Send a dummy value for now
-    const char* response = "dummy_value";
-    send(clientSocket, response, strlen(response), 0);
+  // Send a dummy value for now
+  const char *response = "200 dummy_value";
+  send(clientSocket, response, strlen(response), 0);
 }
 
-void handlePutRequest(SOCKET clientSocket, const char* key, const char* value, char* logBuffer, size_t logBufferSize) {
-    snprintf(logBuffer, logBufferSize, "Received PUT request for key: %s and value: %s", key, value);
-    logMessage(INFO, logBuffer);
+void handlePutRequest(SOCKET clientSocket, const char *key, const char *value,
+                      char *logBuffer, size_t logBufferSize) {
+  snprintf(logBuffer, logBufferSize,
+           "Received PUT request for key: %s and value: %s", key, value);
+  logMessage(INFO, logBuffer);
 
-    // Send an acknowledgment
-    char response[1024];
-    snprintf(response, sizeof(response), "PUT %s", key);
-    send(clientSocket, response, strlen(response), 0);
+  // Send an acknowledgment
+  char response[1024];
+  snprintf(response, sizeof(response), "201 %s", key);
+  send(clientSocket, response, strlen(response), 0);
 }
 
-void handleDelRequest(SOCKET clientSocket, const char* key, char* logBuffer, size_t logBufferSize) {
-    snprintf(logBuffer, logBufferSize, "Received DEL request for key: %s", key);
-    logMessage(INFO, logBuffer);
+void handleDelRequest(SOCKET clientSocket, const char *key, char *logBuffer,
+                      size_t logBufferSize) {
+  snprintf(logBuffer, logBufferSize, "Received DEL request for key: %s", key);
+  logMessage(INFO, logBuffer);
 
-    // Confirm deletion (dummy implementation for now)
-    char response[1024];
-    snprintf(response, sizeof(response), "DEL %s", key);
-    send(clientSocket, response, strlen(response), 0);
+  // Confirm deletion (dummy implementation for now)
+  char response[1024];
+  snprintf(response, sizeof(response), "200 %s deleted", key);
+  send(clientSocket, response, strlen(response), 0);
 }
 
 void cleanUp() {
-    if(gl_cleanedUp) {
-        return;
-    }
-    closesocket(gl_serverSocket);
-    WSACleanup();
-    gl_cleanedUp = true;
-    logMessage(INFO, "Graceful clean up done.");
+  if (gl_cleanedUp) {
     return;
+  }
+  closesocket(gl_serverSocket);
+  WSACleanup();
+  gl_cleanedUp = true;
+  logMessage(INFO, "Graceful clean up done.");
+  return;
 }
 
 void handleInterrupt(int signal) {
