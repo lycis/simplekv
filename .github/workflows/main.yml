@@ -16,5 +16,7 @@ jobs:
           install: git mingw-w64-x86_64-clang
       - name: build server
         shell: msys2 {0}
-        run: /clang64/bin/clang.exe -fdiagnostics-color=always -g server.c -o server.exe -lws2_32
+        run: |
+          uname -a
+        # run: /clang64/bin/clang.exe -fdiagnostics-color=always -g server.c -o server.exe -lws2_32
           
