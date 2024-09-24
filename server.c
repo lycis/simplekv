@@ -8,6 +8,8 @@
 #include <WinSock2.h>
 #endif
 
+#define MAX_REQUEST_SIZE 5 * 1024 * 1024 // 5 MB buffer for requests
+
 enum LogLevel {
   FATAL = 0,
   WARN = 1,
@@ -66,8 +68,7 @@ void handleConnections(SOCKET serverSocket);
 SOCKET acceptClientConnection(SOCKET serverSocket, char *logBuffer,
                               size_t logBufferSize);
 void handleAcceptError(char *logBuffer, size_t logBufferSize);
-int receiveData(SOCKET clientSocket, char *buffer, size_t bufferSize,
-                char *logBuffer, size_t logBufferSize);
+int receiveData(SOCKET clientSocket, char *buffer, size_t bufferSize);
 void processClientRequest(SOCKET clientSocket, char *buffer, char *logBuffer,
                           size_t logBufferSize);
 void handleGetRequest(SOCKET clientSocket, const char *key, char *logBuffer,
@@ -213,7 +214,7 @@ void bindSocket(SOCKET sock, int port) {
 void handleConnections(SOCKET serverSocket) {
   char logBuffer[1024];
 
-  // Main loop for accepting connections
+  // we keep running as long as there was no interrupt
   while (gl_keepRunning) {
     SOCKET clientSocket =
         acceptClientConnection(serverSocket, logBuffer, sizeof(logBuffer));
@@ -221,17 +222,16 @@ void handleConnections(SOCKET serverSocket) {
       continue; // If accept fails, continue to the next iteration
     }
 
-    char buffer[2048] = {0};
-    if (receiveData(clientSocket, buffer, sizeof(buffer), logBuffer,
-                    sizeof(logBuffer)) == SOCKET_ERROR) {
+    char* buffer = (char*)malloc(MAX_REQUEST_SIZE);
+    memset(buffer, 0, MAX_REQUEST_SIZE);
+    if (receiveData(clientSocket, buffer, MAX_REQUEST_SIZE) == SOCKET_ERROR) {
       closesocket(clientSocket);
       continue; // Move to the next iteration in case of receiving error
     }
 
-    // Process the request
     processClientRequest(clientSocket, buffer, logBuffer, sizeof(logBuffer));
 
-    // Close the client connection
+    free(buffer); // release message buffer
     closesocket(clientSocket);
   }
 }
@@ -267,11 +267,11 @@ void handleAcceptError(char *logBuffer, size_t logBufferSize) {
   }
 }
 
-int receiveData(SOCKET clientSocket, char *buffer, size_t bufferSize,
-                char *logBuffer, size_t logBufferSize) {
+int receiveData(SOCKET clientSocket, char *buffer, size_t bufferSize) {
   int receivedBytes = recv(clientSocket, buffer, bufferSize, 0);
   if (receivedBytes == SOCKET_ERROR) {
-    snprintf(logBuffer, logBufferSize, "Failed to receive data. Error code: %d",
+    char logBuffer[1024];
+    snprintf(logBuffer, sizeof(logBuffer), "Failed to receive data. Error code: %d",
              WSAGetLastError());
     logMessage(ERR, logBuffer);
   }
