@@ -1,8 +1,8 @@
-name: Build SimpleKV
+name: MSYS2
 on: [push, pull_request]
 
 jobs:
-  msys2-clang64:
+  msys2-ucrt64:
     runs-on: windows-latest
     defaults:
       run:
@@ -11,11 +11,10 @@ jobs:
       - uses: actions/checkout@v3
       - uses: msys2/setup-msys2@v2
         with:
-          msystem: clang64
+          msystem: UCRT64
           update: true
-          install: git mingw-w64-x86_64-clang
-      - name: build server
-        shell: msys2 {0}
+          install: git mingw-w64-ucrt-x86_64-gcc
+      - name: CI-Build
         run: |
-          /clang64/bin/clang.exe -fdiagnostics-color=always -g server.c -o server.exe -lws2_32
-          
+          echo 'Running in MSYS2!'
+          ./ci-build.sh
