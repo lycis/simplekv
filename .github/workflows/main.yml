@@ -15,5 +15,7 @@ jobs:
           update: true
           install: git mingw-w64-x86_64-clang
       - name: build server
-        run: clang -fdiagnostics-color=always -g server.c -o server.exe -lws2_32
+        run: |
+          ls
+          clang -fdiagnostics-color=always -g server.c -o server.exe -lws2_32
           
