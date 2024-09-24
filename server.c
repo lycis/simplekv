@@ -319,7 +319,7 @@ const char *parse_operation(const char *request_str,
   int operation_len = space_ptr - request_str;
   result->operation = (char *)malloc(operation_len + 1);
   if (!result->operation) {
-    return NULL; // Memory allocation failure
+    return NULL;
   }
 
   strncpy(result->operation, request_str, operation_len);
@@ -334,7 +334,7 @@ const char *parse_key(const char *after_op_ptr, struct kvstr_request *result) {
     return NULL; // Malformed request (no colon found)
   }
 
-  int key_len = atoi(after_op_ptr); // Parse key length
+  int key_len = atoi(after_op_ptr);
   if (key_len <= 0) {
     return NULL; // Invalid key length
   }
@@ -346,7 +346,7 @@ const char *parse_key(const char *after_op_ptr, struct kvstr_request *result) {
 
   const char *key_ptr = colon_ptr + 1;
   strncpy(result->key, key_ptr, key_len);
-  result->key[key_len] = '\0'; // Null-terminate
+  result->key[key_len] = '\0';
 
   return key_ptr + key_len; // Return pointer to next part of the string
 }
@@ -371,14 +371,14 @@ int parse_value(const char *after_key_ptr, struct kvstr_request *result) {
 
   result->value = (char *)malloc(value_len + 1);
   if (!result->value) {
-    return -1; // Memory allocation failure
+    return -1;
   }
 
   const char *value_ptr = value_colon_ptr + 1;
   strncpy(result->value, value_ptr, value_len);
-  result->value[value_len] = '\0'; // Null-terminate
+  result->value[value_len] = '\0';
 
-  return 0; // Success
+  return 0;
 }
 
 const char *parseError2str(int error) {
