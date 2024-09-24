@@ -17,5 +17,5 @@ jobs:
       - name: build server
         run: |
           ls /
-          clang -fdiagnostics-color=always -g server.c -o server.exe -lws2_32
+          /clang64/bin/clang.exe -fdiagnostics-color=always -g server.c -o server.exe -lws2_32
           
