@@ -17,6 +17,5 @@ jobs:
       - name: build server
         shell: msys2 {0}
         run: |
-          uname -a
-        # run: /clang64/bin/clang.exe -fdiagnostics-color=always -g server.c -o server.exe -lws2_32
+          /clang64/bin/clang.exe -fdiagnostics-color=always -g server.c -o server.exe -lws2_32
           
