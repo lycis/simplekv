@@ -325,30 +325,48 @@ const char *parse_operation(const char *request_str,
   }
 
   strncpy(result->operation, request_str, operation_len);
-  result->operation[operation_len] = '\0'; // Null-terminate
+    result->operation[operation_len] = '\0'; // Null-terminate
+
+  if(strcmp(result->operation, "GET") != 0 && strcmp(result->operation, "PUT") != 0 && strcmp(result->operation, "DEL") != 0) {
+    result->operation = NULL;
+    return NULL; // Invalid operation
+  }
+
   return space_ptr + 1; // Return pointer to next part of the string
 }
 
-// Helper function to parse the key from the request
 const char *parse_key(const char *after_op_ptr, struct kvstr_request *result) {
   char *colon_ptr = strchr(after_op_ptr, ':');
   if (!colon_ptr) {
     return NULL; // Malformed request (no colon found)
   }
 
-  int key_len = atoi(after_op_ptr);
+  int key_len = atoi(after_op_ptr);  // Convert key length to integer
   if (key_len <= 0) {
     return NULL; // Invalid key length
   }
 
-  result->key = (char *)malloc(key_len + 1);
+  const char *key_ptr = colon_ptr + 1;
+  
+  // Ensure the input string is long enough for the key
+  if (strlen(key_ptr) < key_len) {
+    return NULL; // Key length mismatch
+  }
+
+  result->key = (char *)malloc(key_len + 1); // Allocate memory for the key
   if (!result->key) {
     return NULL; // Memory allocation failure
   }
 
-  const char *key_ptr = colon_ptr + 1;
+  // Copy the key and ensure null-termination
   strncpy(result->key, key_ptr, key_len);
-  result->key[key_len] = '\0';
+  result->key[key_len] = '\0'; // Manually null-terminate
+
+  // Additional validation: check if the key matches the expected length
+  if (strlen(result->key) != key_len) {
+    free(result->key);
+    return NULL; // Actual key length does not match the given length
+  }
 
   return key_ptr + key_len; // Return pointer to next part of the string
 }
@@ -363,7 +381,7 @@ int parse_value(const char *after_key_ptr, struct kvstr_request *result) {
 
   char *value_colon_ptr = strchr(after_key_ptr, ':');
   if (!value_colon_ptr) {
-    return -1; // Malformed request (no colon found for value)
+    return -1; // Malformed request (no colon found for value length)
   }
 
   int value_len = atoi(after_key_ptr); // Parse value length
@@ -371,17 +389,31 @@ int parse_value(const char *after_key_ptr, struct kvstr_request *result) {
     return -1; // Invalid value length
   }
 
-  result->value = (char *)malloc(value_len + 1);
-  if (!result->value) {
-    return -1;
+  const char *value_ptr = value_colon_ptr + 1;
+
+  // Ensure the input string is long enough for the value
+  if (strlen(value_ptr) < value_len) {
+    return -1; // Value length mismatch
   }
 
-  const char *value_ptr = value_colon_ptr + 1;
-  strncpy(result->value, value_ptr, value_len);
-  result->value[value_len] = '\0';
+  // Allocate memory for the value and ensure null-termination
+  result->value = (char *)malloc(value_len + 1); // +1 for null terminator
+  if (!result->value) {
+    return -1; // Memory allocation failure
+  }
 
-  return 0;
+  strncpy(result->value, value_ptr, value_len); // Copy the value
+  result->value[value_len] = '\0'; // Null-terminate the value
+
+  // Check if the copied value has the expected length
+  if (strlen(result->value) != value_len) {
+    free(result->value);
+    return -1; // Actual value length does not match the given length
+  }
+
+  return 0; // Success
 }
+
 
 const char *parseError2str(int error) {
   switch (error) {
