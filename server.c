@@ -328,6 +328,7 @@ const char *parse_operation(const char *request_str,
     result->operation[operation_len] = '\0'; // Null-terminate
 
   if(strcmp(result->operation, "GET") != 0 && strcmp(result->operation, "PUT") != 0 && strcmp(result->operation, "DEL") != 0) {
+    free(result->operation);
     result->operation = NULL;
     return NULL; // Invalid operation
   }
