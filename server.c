@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <time.h>
+#include "kvstore.h"
 
 #define SKVS_SERVER
 
@@ -63,6 +64,7 @@ static enum LogLevel gl_logLevel = INFO;
 static volatile bool gl_keepRunning = true;
 static volatile bool gl_cleanedUp = false;
 static SOCKET gl_serverSocket;
+static kv_store* gl_kvStore;
 /*** global variables end ***/
 
 /*** prototypes ***/
@@ -75,8 +77,7 @@ void processClientRequest(SOCKET clientSocket, char *buffer, char *logBuffer,
                           size_t logBufferSize);
 void handleGetRequest(SOCKET clientSocket, const char *key, char *logBuffer,
                       size_t logBufferSize);
-void handlePutRequest(SOCKET clientSocket, const char *key, const char *value,
-                      char *logBuffer, size_t logBufferSize);
+void handlePutRequest(SOCKET clientSocket, const char *key, const char *value);
 void handleDelRequest(SOCKET clientSocket, const char *key, char *logBuffer,
                       size_t logBufferSize);
 const char* parse_value(const char *after_key_ptr, struct kvstr_request *result);
@@ -451,7 +452,7 @@ void processClientRequest(SOCKET clientSocket, char *buffer, char *logBuffer,
     if (strcmp(req->operation, "GET") == 0) {
       handleGetRequest(clientSocket, req->key, logBuffer, logBufferSize);
     } else if (strcmp(req->operation, "PUT") == 0) {
-      handlePutRequest(clientSocket, req->key, req->value, logBuffer, logBufferSize);
+      handlePutRequest(clientSocket, req->key, req->value);
     } else if (strcmp(req->operation, "DEL") == 0) {
       handleDelRequest(clientSocket, req->key, logBuffer, logBufferSize);
     } else {
@@ -463,8 +464,7 @@ void processClientRequest(SOCKET clientSocket, char *buffer, char *logBuffer,
   return;
 }
 
-void handleGetRequest(SOCKET clientSocket, const char *key, char *logBuffer,
-                      size_t logBufferSize) {
+void handleGetRequest(SOCKET clientSocket, const char *key, char *logBuffer, size_t logBufferSize) {
   snprintf(logBuffer, logBufferSize, "Received GET request for key: %s", key);
   logMessage(INFO, logBuffer);
 
@@ -473,16 +473,37 @@ void handleGetRequest(SOCKET clientSocket, const char *key, char *logBuffer,
   send(clientSocket, response, strlen(response), 0);
 }
 
-void handlePutRequest(SOCKET clientSocket, const char *key, const char *value,
-                      char *logBuffer, size_t logBufferSize) {
-  snprintf(logBuffer, logBufferSize,
-           "Received PUT request for key: %s and value: %s", key, value);
+void logKvStoreStatus() {
+  // return a status of kv store statistics (current stored entries and capcaity)
+  char buffer[1024];
+  snprintf(buffer, 1024, "kvstore status -> size='%d' capacity='%d'", (int) gl_kvStore->size, (int) gl_kvStore->capacity);
+  logMessage(DEBUG, buffer);
+  return;
+}
+
+void handlePutRequest(SOCKET clientSocket, const char *key, const char *value) {
+  char logBuffer[1024];
+
+  memset(logBuffer, 0, sizeof(logBuffer));
+  snprintf(logBuffer, 1024, "Received PUT request for key: %s and value: %s", key, value);
   logMessage(INFO, logBuffer);
 
+  // Store the key value pair in the key value store
+  int result = kv_store_put(gl_kvStore, key, value);
+  if (result != 0) {
+    char response[1024];
+    snprintf(response, sizeof(response), "500 Failed to store key: %s reason: %d", key, result);
+    send(clientSocket, response, strlen(response), 0);
+    return;
+  }
+
+  memset(logBuffer, 0, sizeof(logBuffer));
+  snprintf(logBuffer, 1024, "key stored. key='%s' value='%s'.", key, value);
+  logKvStoreStatus();
+
+
   // Send an acknowledgment
-  char response[1024];
-  snprintf(response, sizeof(response), "201 %s", key);
-  send(clientSocket, response, strlen(response), 0);
+  send(clientSocket, "201 Key created", 15, 0);
 }
 
 void handleDelRequest(SOCKET clientSocket, const char *key, char *logBuffer,
@@ -500,8 +521,16 @@ void cleanUp() {
   if (gl_cleanedUp) {
     return;
   }
+  
   closesocket(gl_serverSocket);
   WSACleanup();
+
+  if(gl_kvStore != NULL) {
+    free_kv_store(gl_kvStore);
+    gl_kvStore = NULL;
+    logMessage(DEBUG, "Key value store freed.");
+  }
+
   gl_cleanedUp = true;
   logMessage(INFO, "Graceful clean up done.");
   return;
@@ -536,9 +565,16 @@ int main(int argc, char **argv) {
   }
 
   logMessage(INFO, "Starting server.");
+
+  // Initialize the key value store
+  logMessage(INFO, "Initializing key value store with initial capacity of 1024");
+  gl_kvStore = create_kv_store(1024);
+
+  // Bind and listen on the server socket
   createSocket();
   bindSocket(gl_serverSocket, 8080);
   handleConnections(gl_serverSocket);
+
   cleanUp();
   logMessage(INFO, "Server shutdown complete.");
 
