@@ -13,9 +13,11 @@
 
 #ifdef UNIT_TEST
 
+const char* _mock_lastMessage = NULL;
+
 int mock_send(SOCKET socket, const char *buffer, size_t length, int flags) {
     // Simulate sending a message; you can log it or store it for assertions later
-    printf("Sent: %.*s\n", (int)length, buffer);
+    _mock_lastMessage = buffer;
     return length; // Simulate successful send
 }
 
@@ -501,9 +503,16 @@ void logKvStoreStatus() {
 void handlePutRequest(SOCKET clientSocket, const char *key, const char *value) {
   char logBuffer[1024];
   if (key == NULL || value == NULL) {
-      const char *errorMsg = "400 Bad Request: Key and value must not be NULL.";
+      const char *errorMsg = "500 Internal Server Error: Key and value must not be NULL.";
       send(clientSocket, errorMsg, strlen(errorMsg), 0);
       logMessage(ERR, "Invalid PUT request: Key or value is NULL.");
+      return;
+  }
+
+  if (strlen(key) < 1 || strlen(value) < 1) {
+    const char *errorMsg = "400 Bad Request: Key and value must not be empty.";
+      send(clientSocket, errorMsg, strlen(errorMsg), 0);
+      logMessage(ERR, "Invalid PUT request: Key or value is empty.");
       return;
   }
 

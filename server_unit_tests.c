@@ -387,7 +387,7 @@ char* test_kv_store_case_sensitivity() {
 char* test_handlePutRequest_validInput() {
     gl_kvStore = create_kv_store(100);
 
-    SOCKET mockSocket = 1; // Mock socket
+    SOCKET mockSocket = 1;
     const char *key = "testKey";
     const char *value = "testValue";
 
@@ -395,6 +395,75 @@ char* test_handlePutRequest_validInput() {
     
     const char* retrieved = kv_store_get(gl_kvStore, key);
     cmunit_assert("value not stored in database", strcmp(retrieved, value) == 0);
+
+    free(gl_kvStore);
+    return NULL;
+}
+
+char* test_handlePutRequest_nullKey() {
+    gl_kvStore = create_kv_store(100);
+
+    SOCKET mockSocket = 1; // Mock socket
+    const char *key = NULL; // Invalid key
+    const char *value = "testValue";
+
+    handlePutRequest(mockSocket, key, value);
+
+    const char* retrieved = kv_store_get(gl_kvStore, key);
+    cmunit_assert("Null key should not store value", retrieved == NULL);
+    cmunit_assert("wrong error message sent.'", strcmp(_mock_lastMessage, "500 Internal Server Error: Key and value must not be NULL.") == 0);
+
+    free(gl_kvStore);
+    return NULL;
+}
+
+char* test_handlePutRequest_emptyKey() {
+    gl_kvStore = create_kv_store(100);
+
+    SOCKET mockSocket = 1; // Mock socket
+    const char *key = ""; // Invalid key
+    const char *value = "testValue";
+
+    handlePutRequest(mockSocket, key, value);
+
+    const char* retrieved = kv_store_get(gl_kvStore, key);
+    cmunit_assert("Empty key should not store value", retrieved == NULL);
+    cmunit_assert("wrong error message sent.'", strcmp(_mock_lastMessage, "400 Bad Request: Key and value must not be empty.") == 0);
+
+    free(gl_kvStore);
+    return NULL;
+}
+
+char* test_handlePutRequest_nullValue() {
+    gl_kvStore = create_kv_store(100);
+
+    SOCKET mockSocket = 1; // Mock socket
+    const char *key = "testKey";
+    const char *value = NULL; // Invalid value
+
+    handlePutRequest(mockSocket, key, value);
+
+    const char* retrieved = kv_store_get(gl_kvStore, key);
+    cmunit_assert("Null value should not store in database", retrieved == NULL);
+    cmunit_assert("wrong error message sent.'", strcmp(_mock_lastMessage, "500 Internal Server Error: Key and value must not be NULL.") == 0);
+
+
+    free(gl_kvStore);
+    return NULL;
+}
+
+char* test_handlePutRequest_emptyValue() {
+    gl_kvStore = create_kv_store(100);
+
+    SOCKET mockSocket = 1; // Mock socket
+    const char *key = "testKey";
+    const char *value = ""; // Invalid value
+
+    handlePutRequest(mockSocket, key, value);
+
+    const char* retrieved = kv_store_get(gl_kvStore, key);
+    cmunit_assert("Empty value should not store in database", retrieved == NULL);
+    cmunit_assert("wrong error message sent.'", strcmp(_mock_lastMessage, "400 Bad Request: Key and value must not be empty.") == 0);
 
     free(gl_kvStore);
     return NULL;
@@ -435,7 +504,13 @@ int main(void) {
     cmunit_run_test(test_kv_store_resizable);
     cmunit_run_test(test_kv_store_case_sensitivity);
 
+    // testing server side request handling
     cmunit_run_test(test_handlePutRequest_validInput);
+    cmunit_run_test(test_handlePutRequest_nullKey);
+    cmunit_run_test(test_handlePutRequest_emptyKey);
+    cmunit_run_test(test_handlePutRequest_nullValue);
+    cmunit_run_test(test_handlePutRequest_emptyValue);
+
 
     cmunit_summary();
 
