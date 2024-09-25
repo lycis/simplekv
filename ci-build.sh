@@ -17,7 +17,7 @@ compile() {
     local flags=$4
 
     echo "⚙️ $description..."
-    gcc -fdiagnostics-color=always $flags "$source_file" -o "$output_file" -lws2_32
+    gcc -fdiagnostics-color=always $flags $source_file -o "$output_file" -lws2_32
     if [ $? -ne 0 ]; then
         echo "❌ $description failed"
         exit 1
