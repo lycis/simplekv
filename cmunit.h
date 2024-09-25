@@ -16,10 +16,10 @@
         _cmunit_tests_run++; \
         if (message != NULL) {\
             _cmunit_test_errors++; \
-            printf("%s failed: %s\n", fname, message); \
+            printf("%s ❌ failed: %s\n", fname, message); \
         } \
         else { \
-            printf("%s passed\n", fname); \
+            printf("%s ✅ passed\n", fname); \
         } \
     } while (0)
 
