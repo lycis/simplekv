@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <time.h>
 
+#define SKVS_SERVER
+
 
 #ifdef WIN64
 #include <WinSock2.h>
@@ -472,6 +474,7 @@ void handleInterrupt(int signal) {
   cleanUp();
 }
 
+#ifndef UNIT_TEST
 int main(int argc, char **argv) {
 #ifndef WIN64
   printf("This program is only meant to be run on Windows 64-bit. Other OS are "
@@ -503,3 +506,6 @@ int main(int argc, char **argv) {
 #endif
   return 0;
 }
+#else
+#include "server_unit_tests.c"
+#endif
