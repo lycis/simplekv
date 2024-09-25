@@ -79,7 +79,7 @@ void handlePutRequest(SOCKET clientSocket, const char *key, const char *value,
                       char *logBuffer, size_t logBufferSize);
 void handleDelRequest(SOCKET clientSocket, const char *key, char *logBuffer,
                       size_t logBufferSize);
-int parse_value(const char *after_key_ptr, struct kvstr_request *result);
+const char* parse_value(const char *after_key_ptr, struct kvstr_request *result);
 int kvstr_parse_request(const char *request_str, struct kvstr_request *result);
 const char *parse_operation(const char *request_str,
                             struct kvstr_request *result);
@@ -300,12 +300,19 @@ int kvstr_parse_request(const char *request_str, struct kvstr_request *result) {
 
   // If this is a PUT request, parse the value
   if (strcmp(result->operation, "PUT") == 0) {
-    if (parse_value(after_key_ptr, result) == -1) {
+    after_key_ptr = parse_value(after_key_ptr, result);
+    if (after_key_ptr == NULL) {
       free_kvstr_request(result);
       return -4; // Failed to parse value
     }
   }
 
+  // Ensure that the request string has been fully parsed
+  if (*after_key_ptr != '\0') {
+    free_kvstr_request(result);
+    return -5; // Junk data found after parsing
+  }
+  
   return 0; // Success
 }
 
@@ -372,34 +379,34 @@ const char *parse_key(const char *after_op_ptr, struct kvstr_request *result) {
 }
 
 // Helper function to parse the value from the request (for PUT)
-int parse_value(const char *after_key_ptr, struct kvstr_request *result) {
+const char* parse_value(const char *after_key_ptr, struct kvstr_request *result) {
   if (*after_key_ptr != ' ') {
-    return -1; // Malformed request (no space after key)
+    return NULL; // Malformed request (no space after key)
   }
 
   after_key_ptr++; // Skip the space
 
   char *value_colon_ptr = strchr(after_key_ptr, ':');
   if (!value_colon_ptr) {
-    return -1; // Malformed request (no colon found for value length)
+    return NULL; // Malformed request (no colon found for value length)
   }
 
   int value_len = atoi(after_key_ptr); // Parse value length
   if (value_len <= 0) {
-    return -1; // Invalid value length
+    return NULL; // Invalid value length
   }
 
   const char *value_ptr = value_colon_ptr + 1;
 
   // Ensure the input string is long enough for the value
   if (strlen(value_ptr) < value_len) {
-    return -1; // Value length mismatch
+    return NULL; // Value length mismatch
   }
 
   // Allocate memory for the value and ensure null-termination
   result->value = (char *)malloc(value_len + 1); // +1 for null terminator
   if (!result->value) {
-    return -1; // Memory allocation failure
+    return NULL; // Memory allocation failure
   }
 
   strncpy(result->value, value_ptr, value_len); // Copy the value
@@ -408,10 +415,10 @@ int parse_value(const char *after_key_ptr, struct kvstr_request *result) {
   // Check if the copied value has the expected length
   if (strlen(result->value) != value_len) {
     free(result->value);
-    return -1; // Actual value length does not match the given length
+    return NULL; // Actual value length does not match the given length
   }
 
-  return 0; // Success
+  return value_ptr + value_len;
 }
 
 
