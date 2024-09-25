@@ -124,7 +124,7 @@ void logMessage(enum LogLevel lvl, const char *message) {
   getCurrentTimeString(timeStampStr);
   printf("%s - %s - %s\n", timeStampStr, getLogLevelAsStr(lvl), message);
 #else
-  printf("%s - %s\n", lvlStr, message);
+  printf("%s - %s\n", getLogLevelAsStr(lvl), message);
 #endif
 
   if (lvl == FATAL) {
