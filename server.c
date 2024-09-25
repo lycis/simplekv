@@ -224,8 +224,7 @@ void handleConnections(SOCKET serverSocket) {
       continue; // If accept fails, continue to the next iteration
     }
 
-    char* buffer = (char*)malloc(MAX_REQUEST_SIZE);
-    memset(buffer, 0, MAX_REQUEST_SIZE);
+    char* buffer = (char*)calloc(MAX_REQUEST_SIZE, 1);
     if (receiveData(clientSocket, buffer, MAX_REQUEST_SIZE) == SOCKET_ERROR) {
       closesocket(clientSocket);
       continue; // Move to the next iteration in case of receiving error
