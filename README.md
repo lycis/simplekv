@@ -21,8 +21,10 @@ The primary goal of this project is to offer a lightweight, network-enabled key-
 
 ## Project Structure
 
-- **`server.c`:** Implements the core key-value store server.
-- **`client.c`:** A simple command-line client for testing and interacting with the server.
+- `server.c`: Implements the core key-value store server.
+- `kvstore.c` and `kvstore.h`: Implementation of the in-memory key-value-store used by the server.
+- `kvstrprotocol.h`: helper functions to implement the [Protocol](PROTOCOL.md) in an application (esp. building requests to send to the server)
+- `client.c`: A simple command-line client for testing and interacting with the server.
 
 ## Prerequisites
 
@@ -32,21 +34,28 @@ To build and run this project, you will need:
 - Winsock library (`-lws2_32` for linking)
 
 ## Installation & Compilation
-The project only consists of two primary C files: `server.c` and `client.c`. Both applications are self-ccontained within their files. There are no dependencies other than the Winsock library (`-lws2_32`) for networking. So building is simple:
+There are no dependencies other than the Winsock library (`-lws2_32`) for networking. So building is simple:
 
 1. **Clone the repository:**
     ```sh
     git clone https://github.com/yourusername/simplekv.git
-    ```
-
-2. **Navigate to the project directory:**
-    ```sh
     cd simplekv
     ```
 
+2. **Building & running tests for the server:**
+    ```sh
+    gcc -DWIN64 -DUNIT_TEST -g server.c kvstore.c -o server_test -lws2_32
+    ./server_test
+    ```
+
+    When the `UNIT_TEST` build definition flag is given, the resulting binary will run the test suite of the server. Without it
+    the actual server will be built from the same sources.
+
+    All tests should return as `passed` in order for the server to function correctly.
+
 3. **Compile the server:**
     ```sh
-    gcc -o server server.c -lws2_32
+    gcc -DWIN64 -g server.c kvstore.c -o server_test -lws2_32
     ```
 
 4. **Compile the client (optional):**
@@ -54,7 +63,7 @@ The project only consists of two primary C files: `server.c` and `client.c`. Bot
     gcc -o client client.c -lws2_32
     ```
 
-This will generate the server and client executables (`server.exe` and `client.exe`).
+    The client is simple and self-contained in one source file and the protocol header `kvstrprotocol.h` only.
 
 ## Usage
 See the [PROTOCOL](PROTOCOL.md) for a description of the communication protocol used between the `simplekv` server and any client.
@@ -66,7 +75,7 @@ See the [PROTOCOL](PROTOCOL.md) for a description of the communication protocol 
     ./server
     ```
 
-   By default, the server listens on port `8080`.
+   By default, the server listens on port `8080`. This can currently not be changed.
 
    The log level can be controlled with the `-l` argument followed by one of the log levels: `ERR`, `INFO`, `DEBUG`, `WARN`, `FATAL`. By default the log level will be set to `INFO`. For example:
     ```sh
