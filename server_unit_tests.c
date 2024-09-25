@@ -1,6 +1,7 @@
 #include "cmunit.h"
 #include <string.h>
 #include <stdio.h>
+#include "kvstore.h"
 
 #ifndef SKVS_SERVER
 #include "server.c"
@@ -256,6 +257,132 @@ char* test_kvstr_parse_request_with_short_key() {
     return NULL;
 }
 
+char* test_kv_store_put_and_retrieve_a_value() {
+    kv_store* store = create_kv_store(1);
+    cmunit_assert("allocating kv_store failed", store != NULL);
+
+    const char* key = "key";
+    const char* value = "value";
+    int result = kv_store_put(store, key, value);
+    cmunit_assert("putting value failed", result == 0);
+
+    const char* retrieved_value = kv_store_get(store, key);
+    cmunit_assert("retrieved value does not equal put value", strcmp(retrieved_value, value) == 0);
+
+    free_kv_store(store); // Free the store after the test
+
+    return NULL;
+}
+
+char* test_kv_store_put_overwrites_existing_value() {
+    kv_store* store = create_kv_store(1);
+    cmunit_assert("allocating kv_store failed", store != NULL);
+
+    const char* key = "key";
+    const char* initial_value = "initial_value";
+    int result = kv_store_put(store, key, initial_value);
+    cmunit_assert("putting initial value failed", result == 0);
+
+    const char* new_value = "new_value";
+    result = kv_store_put(store, key, new_value);
+    cmunit_assert("putting new value failed", result == 0);
+
+    const char* retrieved_value = kv_store_get(store, key);
+    cmunit_assert("retrieved value does not equal new value", strcmp(retrieved_value, new_value) == 0);
+
+    free_kv_store(store); // Free the store after the test
+
+    return NULL;
+}
+
+char* test_kv_store_get_returns_null_for_non_existent_key() {
+    kv_store* store = create_kv_store(1);
+    cmunit_assert("allocating kv_store failed", store != NULL);
+
+    const char* key = "non_existent_key";
+    const char* retrieved_value = kv_store_get(store, key);
+    cmunit_assert("retrieved value for non-existent key should be NULL", retrieved_value == NULL);
+
+    free_kv_store(store); // Free the store after the test
+
+    return NULL;
+}
+
+char* test_kv_store_handles_large_number_of_entries() {
+    kv_store* store = create_kv_store(1000);
+    cmunit_assert("allocating kv_store failed", store != NULL);
+
+    const int num_entries = 1000;
+    for (int i = 0; i < num_entries; i++) {
+        char key[16], value[16];
+        snprintf(key, sizeof(key), "key_%d", i);
+        snprintf(value, sizeof(value), "value_%d", i);
+
+        int result = kv_store_put(store, key, value);
+        cmunit_assert("putting value in large store failed", result == 0);
+    }
+
+    for (int i = 0; i < num_entries; i++) {
+        char key[16], expected_value[16];
+        snprintf(key, sizeof(key), "key_%d", i);
+        snprintf(expected_value, sizeof(expected_value), "value_%d", i);
+
+        const char* retrieved_value = kv_store_get(store, key);
+        cmunit_assert("retrieved value does not equal expected value", strcmp(retrieved_value, expected_value) == 0);
+    }
+
+    free_kv_store(store); // Free the store after the test
+
+    return NULL;
+}
+
+char* test_kv_store_put_null_key_or_value() {
+    kv_store* store = create_kv_store(10);
+    cmunit_assert("allocating kv_store failed", store != NULL);
+
+    int result = kv_store_put(store, NULL, "value");
+    cmunit_assert("putting NULL key should fail", result == -1);
+
+    result = kv_store_put(store, "key", NULL);
+    cmunit_assert("putting NULL value should fail", result == -1);
+
+    free_kv_store(store);
+
+    return NULL;
+}
+
+char* test_kv_store_resizable() {
+    kv_store* store = create_kv_store(2); // Start with a small capacity
+    cmunit_assert("allocating kv_store failed", store != NULL);
+
+    kv_store_put(store, "key1", "value1");
+    kv_store_put(store, "key2", "value2");
+
+    // Store should expand when adding a third key
+    kv_store_put(store, "key3", "value3");
+    const char* retrieved_value = kv_store_get(store, "key3");
+    cmunit_assert("store did not expand properly", strcmp(retrieved_value, "value3") == 0);
+
+    free_kv_store(store);
+
+    return NULL;
+}
+
+char* test_kv_store_case_sensitivity() {
+    kv_store* store = create_kv_store(5);
+    cmunit_assert("allocating kv_store failed", store != NULL);
+
+    kv_store_put(store, "key", "value1");
+    kv_store_put(store, "KEY", "value2");
+
+    const char* retrieved_value1 = kv_store_get(store, "key");
+    const char* retrieved_value2 = kv_store_get(store, "KEY");
+
+    cmunit_assert("case-sensitive key retrieval failed for 'key'", strcmp(retrieved_value1, "value1") == 0);
+    cmunit_assert("case-sensitive key retrieval failed for 'KEY'", strcmp(retrieved_value2, "value2") == 0);
+
+    return NULL;
+}
 
 
 #ifdef UNIT_TEST
@@ -282,6 +409,15 @@ int main(void) {
     cmunit_run_test(test_kvstr_parse_request_with_junk_data);
     cmunit_run_test(test_kvstr_parse_del_request_with_junk_data);
     cmunit_run_test(test_kvstr_parse_request_with_short_key);
+
+    // tests for the key value store basic operations
+    cmunit_run_test(test_kv_store_put_and_retrieve_a_value);
+    cmunit_run_test(test_kv_store_put_overwrites_existing_value);
+    cmunit_run_test(test_kv_store_get_returns_null_for_non_existent_key);
+    cmunit_run_test(test_kv_store_handles_large_number_of_entries);
+    cmunit_run_test(test_kv_store_put_null_key_or_value);
+    cmunit_run_test(test_kv_store_resizable);
+    cmunit_run_test(test_kv_store_case_sensitivity);
 
     cmunit_summary();
 

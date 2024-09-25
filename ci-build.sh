@@ -39,11 +39,11 @@ run_tests() {
 }
 
 # Compile and run server unit tests
-compile "Building server unit tests" "server.c" "dist/server_test.exe" "-DWIN64 -DUNIT_TEST -g"
+compile "Building server unit tests" "server.c kvstore.c" "dist/server_test.exe" "-DWIN64 -DUNIT_TEST -g"
 run_tests "dist/server_test.exe"
 
 # Compile server and client simultaneously
-compile "Building server.exe for win64" "server.c" "dist/server_x64.exe" "-DWIN64 -g" &
+compile "Building server.exe for win64" "server.c kvstore.c" "dist/server_x64.exe" "-DWIN64 -g" &
 compile "Building client.exe for win64" "client.c" "dist/client_x64.exe" "-g" &
 wait
 
