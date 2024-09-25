@@ -11,6 +11,17 @@
 #include <WinSock2.h>
 #endif
 
+#ifdef UNIT_TEST
+
+int mock_send(SOCKET socket, const char *buffer, size_t length, int flags) {
+    // Simulate sending a message; you can log it or store it for assertions later
+    printf("Sent: %.*s\n", (int)length, buffer);
+    return length; // Simulate successful send
+}
+
+#define send mock_send
+#endif
+
 #define MAX_REQUEST_SIZE 5 * 1024 * 1024 // 5 MB buffer for requests
 
 enum LogLevel {
@@ -115,6 +126,7 @@ const char *getLogLevelAsStr(enum LogLevel l) {
   }
 }
 
+#ifndef UNIT_TEST
 void logMessage(enum LogLevel lvl, const char *message) {
   if (gl_logLevel < lvl) {
     return;
@@ -132,6 +144,11 @@ void logMessage(enum LogLevel lvl, const char *message) {
     exit(1);
   }
 }
+#else
+void logMessage(enum LogLevel lvl, const char *message) { 
+  // no logging during tests
+}
+#endif
 
 void setLoglevel(const char *lvl) {
   if (strcmp(lvl, "INFO") == 0) {
@@ -483,28 +500,31 @@ void logKvStoreStatus() {
 
 void handlePutRequest(SOCKET clientSocket, const char *key, const char *value) {
   char logBuffer[1024];
+  if (key == NULL || value == NULL) {
+      const char *errorMsg = "400 Bad Request: Key and value must not be NULL.";
+      send(clientSocket, errorMsg, strlen(errorMsg), 0);
+      logMessage(ERR, "Invalid PUT request: Key or value is NULL.");
+      return;
+  }
 
-  memset(logBuffer, 0, sizeof(logBuffer));
-  snprintf(logBuffer, 1024, "Received PUT request for key: %s and value: %s", key, value);
-  logMessage(INFO, logBuffer);
-
-  // Store the key value pair in the key value store
   int result = kv_store_put(gl_kvStore, key, value);
   if (result != 0) {
-    char response[1024];
-    snprintf(response, sizeof(response), "500 Failed to store key: %s reason: %d", key, result);
+    memset(logBuffer, 0, 1024);
+    snprintf(logBuffer, 1024, "Failed to store key: %s, reason: %d", key, result);
+    logMessage(ERR, logBuffer);
+    char response[256];
+    snprintf(response, sizeof(response), "500 Internal Server Error: Failed to store key: %s, reason: %d", key, result);
     send(clientSocket, response, strlen(response), 0);
     return;
   }
 
-  memset(logBuffer, 0, sizeof(logBuffer));
-  snprintf(logBuffer, 1024, "key stored. key='%s' value='%s'.", key, value);
-  logKvStoreStatus();
-
-
-  // Send an acknowledgment
-  send(clientSocket, "201 Key created", 15, 0);
+  memset(logBuffer, 0, 1024);
+  snprintf(logBuffer, 1024, "Key '%s' stored successfully.", key);
+  logMessage(INFO, logBuffer);
+  const char *successMsg = "201 Created: Key stored successfully.";
+  send(clientSocket, successMsg, strlen(successMsg), 0);
 }
+
 
 void handleDelRequest(SOCKET clientSocket, const char *key, char *logBuffer,
                       size_t logBufferSize) {
