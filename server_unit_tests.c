@@ -1,10 +1,15 @@
 #include "cmunit.h"
 #include <string.h>
 #include <stdio.h>
+#include <time.h>
 #include "kvstore.h"
 
 #ifndef SKVS_SERVER
 #include "server.c"
+#endif
+
+#ifndef UNIT_TEST
+char* _mock_lastMessage = NULL;
 #endif
 
 char* test_create_and_free_kvstr_request() {
