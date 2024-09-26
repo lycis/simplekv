@@ -36,6 +36,21 @@ run_tests() {
         exit 1
     fi
     echo "✅ Unit tests passed."
+
+    echo "⬇️ Downloading DrMemory..."
+    wget -O drmemory.zip https://github.com/DynamoRIO/drmemory/releases/download/release_2.6.0/DrMemory-Windows-2.6.0.zip > /dev/null 2>&1
+    unzip drmemory.zip -d drmemory > /dev/null 2>&1
+
+    echo "🩺 Running memory leak analysis ($test_file)..."
+    ./drmemory/DrMemory-Windows-2.6.0/bin/drmemory -no_follow_children -light -count_leaks -brief -summary -batch -ignore_kernel -- "$test_file" > /dev/null 2>memtest_report.txt
+    if grep -q "ERRORS FOUND:" memtest_report.txt; then
+        echo "❌ DrMemory detected memory errors"
+        echo "------ 📄 DrMemory report ------"
+        cat memtest_report.txt
+        
+        exit 1
+    fi
+    echo "✅ DrMemory detected no memory errors"
 }
 
 # Compile and run server unit tests
