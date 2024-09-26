@@ -71,6 +71,7 @@
           "-D UNIT_TEST",
           "-lws2_32",
           "-fdiagnostics-color=always",
+          "-static-libgcc",
           "-g",
           "${workspaceFolder}\\server.c",
           "${workspaceFolder}\\kvstore.c",

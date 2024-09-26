@@ -26,10 +26,8 @@ char* test_create_and_free_kvstr_request() {
     strcpy_s(value, 10, "some value");
     req->value = value;
 
-    free_kvstr_request(req);
-    cmunit_assert("operation not freed", req->operation == NULL);
-    cmunit_assert("key not freed", req->key == NULL);
-    cmunit_assert("value not freed", req->value == NULL);
+    free_kvstr_request(&req);
+    cmunit_assert("request not freed", req == NULL);
     
     return NULL;
 }
@@ -45,7 +43,7 @@ char* test_kvstr_parse_get_request() {
     cmunit_assert("key not parsed", strcmp(req->key, "key") == 0);
     cmunit_assert("value not NULL", req->value == NULL);
 
-    free_kvstr_request(req);
+    free_kvstr_request(&req);
 
     return NULL;
 }
@@ -61,7 +59,7 @@ char* test_kvstr_parse_del_request() {
     cmunit_assert("key not parsed", strcmp(req->key, "key") == 0);
     cmunit_assert("value not NULL", req->value == NULL);
 
-    free_kvstr_request(req);
+    free_kvstr_request(&req);
 
     return NULL;
 }
@@ -77,7 +75,7 @@ char* test_kvstr_parse_put_request() {
     cmunit_assert("key not parsed", strcmp(req->key, "key") == 0);
     cmunit_assert("value not parsed", strcmp(req->value, "value") == 0);
 
-    free_kvstr_request(req);
+    free_kvstr_request(&req);
 
     return NULL;
 }
@@ -90,7 +88,7 @@ char* test_kvstr_parse_put_missing_value() {
     int result = kvstr_parse_request(request_str, req);
     cmunit_assert("parsing should result in missing key error", result == -4);
 
-    free_kvstr_request(req);
+    free_kvstr_request(&req);
 
     return NULL;
 }
@@ -103,7 +101,7 @@ char* test_parse_kvstr_with_empty_string_fails() {
     int result = kvstr_parse_request(request_str, req);
     cmunit_assert("parsing should result in missing operation error", result == -2);
 
-    free_kvstr_request(req);
+    free_kvstr_request(&req);
 
     return NULL;
 }
@@ -115,7 +113,7 @@ char* test_parse_kvstr_with_null_fails() {
     int result = kvstr_parse_request(NULL, req);
     cmunit_assert("parsing should result in invalid input error", result == -1);
 
-    free_kvstr_request(req);
+    free_kvstr_request(&req);
 
     return NULL;
 }
@@ -129,7 +127,7 @@ char* test_parse_kvstr_with_invalid_operation_fails() {
     cmunit_assert("parsing should result in invalid operation error", result == -2);
     cmunit_assert("invalid operation should be NULL", req->operation == NULL);
 
-    free_kvstr_request(req);
+    free_kvstr_request(&req);
 
     return NULL;
 }
@@ -142,7 +140,7 @@ char* test_parse_kvstr_with_invalid_key_fails() {
     int result = kvstr_parse_request(request_str, req);
     cmunit_assert("parsing should result in invalid key error", result == -3);
 
-    free_kvstr_request(req);
+    free_kvstr_request(&req);
 
     return NULL;
 }
@@ -155,7 +153,7 @@ char* test_parse_kvstr_with_missing_value_fails() {
     int result = kvstr_parse_request(request_str, req);
     cmunit_assert("parsing should result in missing value error", result == -4);
 
-    free_kvstr_request(req);
+    free_kvstr_request(&req);
 
     return NULL;
 }
@@ -168,7 +166,7 @@ char* test_parse_kvstr_with_invalid_value_fails() {
     int result = kvstr_parse_request(request_str, req);
     cmunit_assert("parsing should result in missing value error", result == -4);
 
-    free_kvstr_request(req);
+    free_kvstr_request(&req);
 
     return NULL;
 }
@@ -181,7 +179,7 @@ char* test_kvstr_parse_zero_length_key() {
     int result = kvstr_parse_request(request_str, req);
     cmunit_assert("parsing should result in invalid key error", result == -3);
 
-    free_kvstr_request(req);
+    free_kvstr_request(&req);
     return NULL;
 }
 
@@ -193,7 +191,7 @@ char* test_kvstr_parse_zero_length_value() {
     int result = kvstr_parse_request(request_str, req);
     cmunit_assert("parsing should result in invalid value error", result == -4);
 
-    free_kvstr_request(req);
+    free_kvstr_request(&req);
     return NULL;
 }
 
@@ -205,7 +203,7 @@ char* test_kvstr_parse_mismatched_key_length() {
     int result = kvstr_parse_request(request_str, req);
     cmunit_assert("parsing should result in invalid key length error", result == -3);
 
-    free_kvstr_request(req);
+    free_kvstr_request(&req);
     return NULL;
 }
 
@@ -217,7 +215,7 @@ char* test_kvstr_parse_mismatched_value_length() {
     int result = kvstr_parse_request(request_str, req);
     cmunit_assert("parsing should result in invalid value length error", result == -4);
 
-    free_kvstr_request(req);
+    free_kvstr_request(&req);
     return NULL;
 }
 
@@ -229,7 +227,7 @@ char* test_kvstr_parse_request_with_junk_data() {
     int result = kvstr_parse_request(request_str, req);
     cmunit_assert("parsing should result in invalid request format error", result == -5);
 
-    free_kvstr_request(req);
+    free_kvstr_request(&req);
     return NULL;
 }
 
@@ -241,7 +239,7 @@ char* test_kvstr_parse_del_request_with_junk_data() {
     int result = kvstr_parse_request(request_str, req);
     cmunit_assert("parsing should result in invalid request format error", result == -5);
 
-    free_kvstr_request(req);
+    free_kvstr_request(&req);
     return NULL;
 }
 
@@ -253,7 +251,7 @@ char* test_kvstr_parse_request_with_short_key() {
     int result = kvstr_parse_request(request_str, req);
     cmunit_assert("parsing should result in invalid key length error", result == -3);
 
-    free_kvstr_request(req);
+    free_kvstr_request(&req);
     return NULL;
 }
 
@@ -396,7 +394,7 @@ char* test_handlePutRequest_validInput() {
     const char* retrieved = kv_store_get(gl_kvStore, key);
     cmunit_assert("value not stored in database", strcmp(retrieved, value) == 0);
 
-    free(gl_kvStore);
+    free_kv_store(gl_kvStore);
     return NULL;
 }
 
@@ -413,7 +411,7 @@ char* test_handlePutRequest_nullKey() {
     cmunit_assert("Null key should not store value", retrieved == NULL);
     cmunit_assert("wrong error message sent.'", strcmp(_mock_lastMessage, "500 Internal Server Error: Key and value must not be NULL.") == 0);
 
-    free(gl_kvStore);
+    free_kv_store(gl_kvStore);
     return NULL;
 }
 
@@ -430,7 +428,7 @@ char* test_handlePutRequest_emptyKey() {
     cmunit_assert("Empty key should not store value", retrieved == NULL);
     cmunit_assert("wrong error message sent.'", strcmp(_mock_lastMessage, "400 Bad Request: Key and value must not be empty.") == 0);
 
-    free(gl_kvStore);
+    free_kv_store(gl_kvStore);
     return NULL;
 }
 
@@ -447,8 +445,7 @@ char* test_handlePutRequest_nullValue() {
     cmunit_assert("Null value should not store in database", retrieved == NULL);
     cmunit_assert("wrong error message sent.'", strcmp(_mock_lastMessage, "500 Internal Server Error: Key and value must not be NULL.") == 0);
 
-
-    free(gl_kvStore);
+    free_kv_store(gl_kvStore);
     return NULL;
 }
 
@@ -465,7 +462,7 @@ char* test_handlePutRequest_emptyValue() {
     cmunit_assert("Empty value should not store in database", retrieved == NULL);
     cmunit_assert("wrong error message sent.'", strcmp(_mock_lastMessage, "400 Bad Request: Key and value must not be empty.") == 0);
 
-    free(gl_kvStore);
+    free_kv_store(gl_kvStore);
     return NULL;
 }
 

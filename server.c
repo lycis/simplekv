@@ -42,24 +42,36 @@ struct kvstr_request {
 };
 
 // helper fucntion to free the memory allocated for the request
-void free_kvstr_request(struct kvstr_request* req) {
-    if (req->operation != NULL) {
-        free(req->operation);
-        req->operation = NULL;
-    }
-    if (req->key != NULL) {
-        free(req->key);
-        req->key = NULL;
-    }
-    if (req->value != NULL) {
-        free(req->value);
-        req->value = NULL;
-    }
+void free_kvstr_request(struct kvstr_request** req_ptr) {
+  if (req_ptr == NULL) {
+      return;
+  }
+
+  struct kvstr_request* req = *req_ptr;
+  if (req == NULL) {
+      return;
+  }
+  
+  if (req->operation != NULL) {
+      free(req->operation);
+      req->operation = NULL;
+  }
+  if (req->key != NULL) {
+      free(req->key);
+      req->key = NULL;
+  }
+  if (req->value != NULL) {
+      free(req->value);
+      req->value = NULL;
+  }
+
+  free(req);
+  *req_ptr = NULL;
 }
 
 // helper function to initialize a clean request struct
 struct kvstr_request* create_kvstr_request() {
-    struct kvstr_request* req = (struct kvstr_request*)malloc(sizeof(struct kvstr_request));
+    struct kvstr_request* req = (struct kvstr_request*) malloc(sizeof(struct kvstr_request));
     if (req == NULL) {
         return NULL;  // Memory allocation failure
     }
@@ -314,7 +326,6 @@ int kvstr_parse_request(const char *request_str, struct kvstr_request *result) {
 
   const char *after_key_ptr = parse_key(after_op_ptr, result);
   if (after_key_ptr == NULL) {
-    free_kvstr_request(result);
     return -3; // Failed to parse key
   }
 
@@ -322,14 +333,12 @@ int kvstr_parse_request(const char *request_str, struct kvstr_request *result) {
   if (strcmp(result->operation, "PUT") == 0) {
     after_key_ptr = parse_value(after_key_ptr, result);
     if (after_key_ptr == NULL) {
-      free_kvstr_request(result);
       return -4; // Failed to parse value
     }
   }
 
   // Ensure that the request string has been fully parsed
   if (*after_key_ptr != '\0') {
-    free_kvstr_request(result);
     return -5; // Junk data found after parsing
   }
   
@@ -479,7 +488,7 @@ void processClientRequest(SOCKET clientSocket, char *buffer, char *logBuffer,
     }
   }
 
-  free_kvstr_request(req);
+  free_kvstr_request(&req);
   return;
 }
 

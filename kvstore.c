@@ -3,12 +3,12 @@
 #include "kvstore.h"
 
 kv_store* create_kv_store(int initialCapcity) {
-    kv_store* store = malloc(sizeof(kv_store));
+    kv_store* store = calloc(1, sizeof(kv_store));
     if (store == NULL) {
         return NULL;
     }
 
-    store->entries = malloc(initialCapcity * sizeof(kv_entry));
+    store->entries = calloc(initialCapcity, sizeof(kv_entry));
     if (store->entries == NULL) {
         free(store);
         return NULL;
@@ -21,14 +21,38 @@ kv_store* create_kv_store(int initialCapcity) {
 
 int kv_store_resize( kv_store* store) {
     size_t new_capacity = store->capacity * 2;
-    struct kv_entry* new_entries = realloc(store->entries, new_capacity * sizeof(struct kv_entry));
+    struct kv_entry* new_entries = realloc(store->entries, new_capacity * sizeof(kv_entry));
     if (new_entries == NULL) {
         return -1;
     }
 
+    size_t old_capacity = store->capacity;
+    memset(new_entries + old_capacity, 0, (new_capacity - old_capacity) * sizeof(kv_entry));
+
     store->entries = new_entries;
     store->capacity = new_capacity;
     return 0;
+}
+
+char* duplicate_string(const char* str) {
+    if (str == NULL) {
+        return NULL;
+    }
+
+    size_t len = strlen(str);
+    char* dup = malloc(len + 1);
+    if (dup == NULL) {
+        return NULL;
+    }
+
+
+    errno_t err = strcpy_s(dup, len + 1, str);
+    if(err != 0) {
+        free(dup);
+        return NULL;
+    }
+
+    return dup;
 }
 
 int kv_store_put(kv_store* store, const char* key, const char* value) {
@@ -41,7 +65,7 @@ int kv_store_put(kv_store* store, const char* key, const char* value) {
     for (size_t i = 0; i < store->size; i++) {
         if (strcmp(store->entries[i].key, key) == 0) {
             free(store->entries[i].value);
-            store->entries[i].value = strdup(value);
+            store->entries[i].value = duplicate_string(value);
             return 0;
         }
     }
@@ -54,8 +78,8 @@ int kv_store_put(kv_store* store, const char* key, const char* value) {
         }
     }
 
-    store->entries[store->size].key = strdup(key);
-    store->entries[store->size].value = strdup(value);
+    store->entries[store->size].key = duplicate_string(key);
+    store->entries[store->size].value = duplicate_string(value);
     store->size++;
     return 0; 
 }
@@ -72,8 +96,8 @@ const char* kv_store_get(kv_store* store, const char* key) {
 
 void free_kv_store(kv_store* store) {
     for (size_t i = 0; i < store->size; i++) {
-        free(store->entries[i].key);
-        free(store->entries[i].value);
+        if(store->entries[i].key != NULL) free(store->entries[i].key);
+        if(store->entries[i].value != NULL) free(store->entries[i].value);
     }
     free(store->entries);
     free(store);
