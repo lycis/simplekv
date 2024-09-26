@@ -79,7 +79,7 @@ void delFromServer(char *server, int port, char *key) {
     printf("Failed to receive: %d\n", WSAGetLastError());
     exit(1);
   }
-  printf("server says: %s\n", rbuf);
+  printf("%s\n", rbuf);
   closesocket(sock);
 }
 

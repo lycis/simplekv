@@ -471,6 +471,71 @@ char* test_handlePutRequest_emptyValue() {
     return NULL;
 }
 
+char* test_handleGetRequest_validKey() {
+    gl_kvStore = create_kv_store(1);
+
+    const char *key = "testKey";
+    const char *value = "testValue";
+    kv_store_put(gl_kvStore, key, value);
+
+    SOCKET mockSocket = 1;
+
+    handleGetRequest(mockSocket, key);
+
+    cmunit_assert("wrong response message sent.", strcmp(_mock_lastMessage, "200 testValue") == 0);
+
+    free_kv_store(gl_kvStore);
+
+    return NULL;
+}
+
+char* test_handleGetRequest_nonexistentKey() {
+    gl_kvStore = create_kv_store(100);
+
+    SOCKET mockSocket = 1;
+
+    const char *key = "nonExistentKey";
+
+    handleGetRequest(mockSocket, key);
+
+    cmunit_assert("wrong response message sent for non-existent key.", strcmp(_mock_lastMessage, "404 Not Found") == 0);
+
+    free_kv_store(gl_kvStore);
+    return NULL;
+}
+
+char* test_handleGetRequest_nullKey() {
+    gl_kvStore = create_kv_store(100);
+
+    SOCKET mockSocket = 1;
+
+    const char *key = NULL; // invalid key
+
+    handleGetRequest(mockSocket, key);
+
+    cmunit_assert("wrong response message sent for NULL key.", strcmp(_mock_lastMessage, "400 Bad Request: No key") == 0);
+
+    free_kv_store(gl_kvStore);
+    return NULL;
+}
+
+char* test_handleGetRequest_emptyKey() {
+    gl_kvStore = create_kv_store(100);
+
+    SOCKET mockSocket = 1;
+
+    const char *key = ""; // empty key
+
+    handleGetRequest(mockSocket, key);
+
+    // Check if the correct response was sent to the client socket (assuming 400 is returned for invalid requests)
+    cmunit_assert("wrong response message sent for empty key.", strcmp(_mock_lastMessage, "400 Bad Request: No key") == 0);
+
+    free_kv_store(gl_kvStore);
+    return NULL;
+}
+
+
 
 #ifdef UNIT_TEST
 // unit test execution
@@ -512,7 +577,10 @@ int main(void) {
     cmunit_run_test(test_handlePutRequest_emptyKey);
     cmunit_run_test(test_handlePutRequest_nullValue);
     cmunit_run_test(test_handlePutRequest_emptyValue);
-
+    cmunit_run_test(test_handleGetRequest_validKey);
+    cmunit_run_test(test_handleGetRequest_nonexistentKey);
+    cmunit_run_test(test_handleGetRequest_nullKey);
+    cmunit_run_test(test_handleGetRequest_emptyKey);
 
     cmunit_summary();
 

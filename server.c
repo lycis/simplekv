@@ -17,7 +17,10 @@ const char* _mock_lastMessage = NULL;
 
 int mock_send(SOCKET socket, const char *buffer, size_t length, int flags) {
     // Simulate sending a message; you can log it or store it for assertions later
-    _mock_lastMessage = buffer;
+    if(_mock_lastMessage != NULL) {
+        free((void*) _mock_lastMessage);
+    }
+    _mock_lastMessage = duplicate_string(buffer);
     return length; // Simulate successful send
 }
 
@@ -100,11 +103,9 @@ void handleAcceptError(char *logBuffer, size_t logBufferSize);
 int receiveData(SOCKET clientSocket, char *buffer, size_t bufferSize);
 void processClientRequest(SOCKET clientSocket, char *buffer, char *logBuffer,
                           size_t logBufferSize);
-void handleGetRequest(SOCKET clientSocket, const char *key, char *logBuffer,
-                      size_t logBufferSize);
+void handleGetRequest(SOCKET clientSocket, const char *key);
 void handlePutRequest(SOCKET clientSocket, const char *key, const char *value);
-void handleDelRequest(SOCKET clientSocket, const char *key, char *logBuffer,
-                      size_t logBufferSize);
+void handleDelRequest(SOCKET clientSocket, const char *key);
 const char* parse_value(const char *after_key_ptr, struct kvstr_request *result);
 int kvstr_parse_request(const char *request_str, struct kvstr_request *result);
 const char *parse_operation(const char *request_str,
@@ -478,11 +479,11 @@ void processClientRequest(SOCKET clientSocket, char *buffer, char *logBuffer,
     send(clientSocket, buffer, strlen(buffer), 0);
   } else {
     if (strcmp(req->operation, "GET") == 0) {
-      handleGetRequest(clientSocket, req->key, logBuffer, logBufferSize);
+      handleGetRequest(clientSocket, req->key);
     } else if (strcmp(req->operation, "PUT") == 0) {
       handlePutRequest(clientSocket, req->key, req->value);
     } else if (strcmp(req->operation, "DEL") == 0) {
-      handleDelRequest(clientSocket, req->key, logBuffer, logBufferSize);
+      handleDelRequest(clientSocket, req->key);
     } else {
       logMessage(ERR, "Received unknown request.");
     }
@@ -492,20 +493,52 @@ void processClientRequest(SOCKET clientSocket, char *buffer, char *logBuffer,
   return;
 }
 
-void handleGetRequest(SOCKET clientSocket, const char *key, char *logBuffer, size_t logBufferSize) {
-  snprintf(logBuffer, logBufferSize, "Received GET request for key: %s", key);
-  logMessage(INFO, logBuffer);
-
-  // Send a dummy value for now
-  const char *response = "200 dummy_value";
-  send(clientSocket, response, strlen(response), 0);
-}
-
 void logKvStoreStatus() {
   // return a status of kv store statistics (current stored entries and capcaity)
   char buffer[1024];
   snprintf(buffer, 1024, "kvstore status -> size='%d' capacity='%d'", (int) gl_kvStore->size, (int) gl_kvStore->capacity);
   logMessage(DEBUG, buffer);
+  return;
+}
+
+void handleGetRequest(SOCKET clientSocket, const char *key) {
+  char logBuffer[1024];
+  size_t logBufferSize = sizeof(logBuffer);
+
+  if(key == NULL) {
+    logMessage(ERR, "Invalid GET request: Key is NULL.");
+    char *errMsg = "400 Bad Request: No key";
+    send(clientSocket, errMsg, strlen(errMsg), 0);
+    return;
+  }
+
+  if(strlen(key) < 1) {
+    logMessage(ERR, "Invalid GET request: Key is empty.");
+    char *errMsg = "400 Bad Request: No key";
+    send(clientSocket, errMsg, strlen(errMsg), 0);
+    return;
+  }
+
+  snprintf(logBuffer, logBufferSize, "Received GET request for key: %s", key);
+  logMessage(INFO, logBuffer);
+
+  const char *value = kv_store_get(gl_kvStore, key);
+  if(value == NULL) {
+    memset(logBuffer, 0, logBufferSize);
+    sprintf(logBuffer, "Key '%s' not found.", key);
+    logMessage(INFO, logBuffer);
+    char *errMsg = "404 Not Found";
+    send(clientSocket, errMsg, strlen(errMsg), 0);
+    return;
+  }
+
+  char* response = calloc(strlen(value) + 5, 1);
+  sprintf(response, "200 %s", value);
+  
+  send(clientSocket, response, strlen(response), 0);
+
+  free((void*) response);
+
   return;
 }
 
@@ -544,8 +577,10 @@ void handlePutRequest(SOCKET clientSocket, const char *key, const char *value) {
 }
 
 
-void handleDelRequest(SOCKET clientSocket, const char *key, char *logBuffer,
-                      size_t logBufferSize) {
+void handleDelRequest(SOCKET clientSocket, const char *key) {
+  char logBuffer[1024];
+  size_t logBufferSize = sizeof(logBuffer);
+
   snprintf(logBuffer, logBufferSize, "Received DEL request for key: %s", key);
   logMessage(INFO, logBuffer);
 

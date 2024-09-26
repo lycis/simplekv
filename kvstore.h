@@ -19,5 +19,6 @@ int kv_store_resize(kv_store* store);  // resize an existing key value store by 
 int kv_store_put(kv_store* store, const char* key, const char* value) ; // add or overwrite a key value pair in the store
 const char* kv_store_get(kv_store* store, const char* key); // retrieve the value associated with a key from the store
 void free_kv_store(kv_store* store); // free the memory allocated for the key value store (incl. all values)
+char* duplicate_string(const char* str); // duplicate a string in memory
 
 #endif
