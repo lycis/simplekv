@@ -535,7 +535,100 @@ char* test_handleGetRequest_emptyKey() {
     return NULL;
 }
 
+char* test_handleDelRequest_validKey() {
+    gl_kvStore = create_kv_store(1);
 
+    const char *key = "testKey";
+    const char *value = "testValue";
+    kv_store_put(gl_kvStore, key, value);
+
+    SOCKET mockSocket = 1;
+
+    handleDelRequest(mockSocket, key);
+
+    cmunit_assert("wrong response message sent.", strcmp(_mock_lastMessage, "200 Key deleted") == 0);
+    
+    const char* retrieved = kv_store_get(gl_kvStore, key);
+    cmunit_assert("key was not deleted", retrieved == NULL);
+
+    free_kv_store(gl_kvStore);
+
+    return NULL;
+}
+
+char* test_handleDelRequest_nonexistentKey() {
+    gl_kvStore = create_kv_store(1);
+
+    SOCKET mockSocket = 1;
+
+    const char *key = "nonExistentKey";
+
+    handleDelRequest(mockSocket, key);
+
+    cmunit_assert("wrong response message sent for non-existent key.", strcmp(_mock_lastMessage, "404 Not Found") == 0);
+
+    free_kv_store(gl_kvStore);
+    return NULL;
+}
+
+char* test_handleDelRequest_nullKey() {
+    gl_kvStore = create_kv_store(1);
+
+    SOCKET mockSocket = 1;
+
+    const char *key = NULL; // invalid key
+
+    handleDelRequest(mockSocket, key);
+
+    cmunit_assert("wrong response message sent for NULL key.", strcmp(_mock_lastMessage, "400 Bad Request: No key") == 0);
+
+    free_kv_store(gl_kvStore);
+    return NULL;
+}
+
+char* test_handleDelRequest_emptyKey() {
+    gl_kvStore = create_kv_store(1);
+
+    SOCKET mockSocket = 1;
+
+    const char *key = ""; // empty key
+
+    handleDelRequest(mockSocket, key);
+
+    // Check if the correct response was sent to the client socket (assuming 400 is returned for invalid requests)
+    cmunit_assert("wrong response message sent for empty key.", strcmp(_mock_lastMessage, "400 Bad Request: No key") == 0);
+
+    free_kv_store(gl_kvStore);
+    return NULL;
+
+}
+
+char* test_kv_store_delete_existing_key() {
+    kv_store* store = create_kv_store(1);
+    cmunit_assert("allocating kv_store failed", store != NULL);
+
+    const char* key = "key";
+    const char* value = "value";
+    kv_store_put(store, key, value);
+
+    int result = kv_store_delete(store, key);
+    cmunit_assert("deleting key failed", result == 0);
+
+    free_kv_store(store);
+    return NULL;
+}
+
+char* test_kv_store_delete_nonexistent_key() {
+    kv_store* store = create_kv_store(1);
+    cmunit_assert("allocating kv_store failed", store != NULL);
+
+    const char* key = "non_existent_key";
+    int result = kv_store_delete(store, key);
+    cmunit_assert("deleting non-existent key should fail", result == -1);
+
+    free_kv_store(store);
+    return NULL;
+}
 
 #ifdef UNIT_TEST
 // unit test execution
@@ -570,6 +663,8 @@ int main(void) {
     cmunit_run_test(test_kv_store_put_null_key_or_value);
     cmunit_run_test(test_kv_store_resizable);
     cmunit_run_test(test_kv_store_case_sensitivity);
+    cmunit_run_test(test_kv_store_delete_existing_key);
+    cmunit_run_test(test_kv_store_delete_nonexistent_key);
 
     // testing server side request handling
     cmunit_run_test(test_handlePutRequest_validInput);
@@ -581,6 +676,10 @@ int main(void) {
     cmunit_run_test(test_handleGetRequest_nonexistentKey);
     cmunit_run_test(test_handleGetRequest_nullKey);
     cmunit_run_test(test_handleGetRequest_emptyKey);
+    cmunit_run_test(test_handleDelRequest_validKey);
+    cmunit_run_test(test_handleDelRequest_nonexistentKey);
+    cmunit_run_test(test_handleDelRequest_nullKey);
+    cmunit_run_test(test_handleDelRequest_emptyKey);
 
     cmunit_summary();
 

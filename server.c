@@ -581,12 +581,35 @@ void handleDelRequest(SOCKET clientSocket, const char *key) {
   char logBuffer[1024];
   size_t logBufferSize = sizeof(logBuffer);
 
+  if(key == NULL) {
+    logMessage(ERR, "Invalid DEL request: Key is NULL.");
+    char *errMsg = "400 Bad Request: No key";
+    send(clientSocket, errMsg, strlen(errMsg), 0);
+    return;
+  }
+
+  if(strlen(key) < 1) {
+    logMessage(ERR, "Invalid DEL request: Key is empty.");
+    char *errMsg = "400 Bad Request: No key";
+    send(clientSocket, errMsg, strlen(errMsg), 0);
+    return;
+  }
+
   snprintf(logBuffer, logBufferSize, "Received DEL request for key: %s", key);
   logMessage(INFO, logBuffer);
 
+  if(kv_store_delete(gl_kvStore, key) != 0) {
+    memset(logBuffer, 0, logBufferSize);
+    sprintf(logBuffer, "Key '%s' not found.", key);
+    logMessage(INFO, logBuffer);
+    char *errMsg = "404 Not Found";
+    send(clientSocket, errMsg, strlen(errMsg), 0);
+    return;
+  }
+
   // Confirm deletion (dummy implementation for now)
   char response[1024];
-  snprintf(response, sizeof(response), "200 %s deleted", key);
+  snprintf(response, sizeof(response), "200 Key deleted");
   send(clientSocket, response, strlen(response), 0);
 }
 
