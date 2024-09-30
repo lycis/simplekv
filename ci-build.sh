@@ -60,7 +60,9 @@ memory_analysis() {
 download_zig() {
     echo "⬇️ Downloading Zig..."
     wget -O zig.zip https://ziglang.org/builds/zig-windows-x86_64-${ZIG_VERSION}${ZIG_BUILD_ID}.zip > /dev/null 2>&1
+    ls -l
     unzip zig.zip > /dev/null 2>&1
+    ls -l
     mv zig-windows-x86_64-${ZIG_VERSION}${ZIG_BUILD_ID} ${BUILD_TOOLS}/zig
     if [ $? -ne 0 ]; then
         echo "❌ Failed to move downloade Zig to ${BUILD_TOOLS}/zig"
