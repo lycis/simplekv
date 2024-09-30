@@ -32,6 +32,8 @@ pub fn buildDefault(b: *std.Build, name: []const u8, targetQuery: std.Target.Que
 
 
 pub fn build(b: *std.Build) void {
+    const test_step = b.step("test", "Run unit tests");
+
     for (targets) |t| {
         buildDefault(b, "server", t, &.{
             "src/server.c",
@@ -62,5 +64,31 @@ pub fn build(b: *std.Build) void {
                 "-DUNIT_TEST"
             }
         );
+
+        const unit_tests = b.addTest(.{
+        .root_source_file = b.path("test/server_test.zig"),
+        .target = b.resolveTargetQuery(t),
+        });
+        unit_tests.linkLibC();                          // Link against libc.
+        unit_tests.addIncludePath(.{
+            .cwd_relative = "src",
+        });
+        unit_tests.addCSourceFiles(.{
+            .files = &.{
+                "src/server.c",
+                "src/kvstore.c",
+                "src/utilfuns.c"
+            },
+            .flags = &.{
+                "-Wall", 
+                "-std=c23",
+                "-DUNIT_TEST"
+            },
+        });
+        if (t.os_tag == .windows) {
+            unit_tests.linkSystemLibrary("ws2_32");
+        }
+
+        test_step.dependOn(&b.addRunArtifact(unit_tests).step);
     }
 }
