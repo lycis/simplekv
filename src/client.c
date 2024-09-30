@@ -123,9 +123,10 @@ void setValueOnServer(char *server, int port, char *key, char *value) {
 }
 
 int main(int argc, char **argv) {
-#ifndef WIN64
+#ifndef _WIN64
   printf("This program is only meant to be run on Windows 64-bit. Other OS are "
          "currently not supported.");
+  return 1;
 #endif
 
   if (argc < 5) {

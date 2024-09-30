@@ -58,7 +58,7 @@ compile "Building server unit tests" "src/server.c src/kvstore.c" "bin/server_te
 run_tests "bin/server_test.exe"
 
 # Compile server and client simultaneously
-compile "Building server.exe for win64" "src/server.c src/kvstore.c" "bin/server_x64.exe" "-DWIN64 -g" &
+compile "Building server.exe for win64" "src/server.c src/kvstore.c" "bin/server_x64.exe" "-g" &
 compile "Building client.exe for win64" "src/client.c" "bin/client_x64.exe" "-g" &
 wait
 

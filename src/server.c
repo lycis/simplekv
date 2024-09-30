@@ -147,7 +147,7 @@ void logMessage(enum LogLevel lvl, const char *message) {
     return;
   }
 
-#ifdef WIN64
+#ifdef _WIN64
   char timeStampStr[26];
   getCurrentTimeString(timeStampStr);
   printf("%s - %s - %s\n", timeStampStr, getLogLevelAsStr(lvl), message);
@@ -640,7 +640,7 @@ void handleInterrupt(int signal) {
 
 #ifndef UNIT_TEST
 int main(int argc, char **argv) {
-#ifndef WIN64
+#ifndef _WIN64
   printf("This program is only meant to be run on Windows 64-bit. Other OS are "
          "currently not supported.");
 #else

@@ -1,1 +1,1 @@
--DWIN64 -Isrc/
+-Isrc/
