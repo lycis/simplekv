@@ -14,22 +14,6 @@ echo "✅ Cleanup successful"
 echo "⚙️ Creating build tools directory..."
 mkdir -p ${BUILD_TOOLS} || { echo "❌ Failed to create '${BUILD_TOOLS}' directory"; exit 1; }
 
-# Function to compile code
-compile() {
-    local description=$1
-    local source_file=$2
-    local output_file=$3
-    local flags=$4
-
-    echo "⚙️ $description..."
-    gcc -fdiagnostics-color=always $flags $source_file -o "$output_file" -lws2_32
-    if [ $? -ne 0 ]; then
-        echo "❌ $description failed"
-        exit 1
-    fi
-    echo "✅ $description successful"
-}
-
 # Function to run tests
 run_tests() {
     local test_file=$1
