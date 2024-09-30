@@ -5,8 +5,8 @@ command -v gcc >/dev/null 2>&1 || { echo "❌ gcc is required but not installed.
 
 # Clean up previous build artifacts
 echo "⚙️ Cleaning up previous build artifacts..."
-rm -rf dist
-mkdir -p dist || { echo "❌ Failed to create dist directory"; exit 1; }
+rm -rf bin
+mkdir -p bin || { echo "❌ Failed to create 'bin' directory"; exit 1; }
 echo "✅ Cleanup successful"
 
 # Function to compile code
@@ -54,12 +54,12 @@ run_tests() {
 }
 
 # Compile and run server unit tests
-compile "Building server unit tests" "server.c kvstore.c" "dist/server_test.exe" "-DWIN64 -DUNIT_TEST -g"
-run_tests "dist/server_test.exe"
+compile "Building server unit tests" "src/server.c src/kvstore.c" "bin/server_test.exe" "-DUNIT_TEST -g"
+run_tests "bin/server_test.exe"
 
 # Compile server and client simultaneously
-compile "Building server.exe for win64" "server.c kvstore.c" "dist/server_x64.exe" "-DWIN64 -g" &
-compile "Building client.exe for win64" "client.c" "dist/client_x64.exe" "-g" &
+compile "Building server.exe for win64" "src/server.c src/kvstore.c" "bin/server_x64.exe" "-DWIN64 -g" &
+compile "Building client.exe for win64" "src/client.c" "bin/client_x64.exe" "-g" &
 wait
 
 echo "✅ All builds successful!"

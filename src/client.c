@@ -3,7 +3,7 @@
 #include <string.h>
 #include "kvstrprotocol.h"
 
-#ifdef WIN64
+#ifdef _WIN64
 #include <WinSock2.h>
 #endif
 
