@@ -1,6 +1,7 @@
 #ifndef _KVSTORE_H_
 #define _KVSTORE_H_
 
+#include <stddef.h>
 
 typedef struct kv_entry {
     char* key;

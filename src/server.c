@@ -3,16 +3,12 @@
 #include <stdio.h>
 #include <time.h>
 #include "kvstore.h"
+#include "server.h"
 
 #define SKVS_SERVER
 
 
-#ifdef _WIN64
-#include <WinSock2.h>
-#endif
-
 #ifdef UNIT_TEST
-
 const char* _mock_lastMessage = NULL;
 
 int mock_send(SOCKET socket, const char *buffer, size_t length, int flags) {
@@ -28,21 +24,6 @@ int mock_send(SOCKET socket, const char *buffer, size_t length, int flags) {
 #endif
 
 #define MAX_REQUEST_SIZE 5 * 1024 * 1024 // 5 MB buffer for requests
-
-enum LogLevel {
-  FATAL = 0,
-  WARN = 1,
-  ERR = 2,
-  INFO = 3,
-  DEBUG = 4,
-};
-
-// represents a request from the client
-struct kvstr_request {
-    char* key;
-    char* value;
-    char* operation;
-};
 
 // helper fucntion to free the memory allocated for the request
 void free_kvstr_request(struct kvstr_request** req_ptr) {
@@ -94,24 +75,6 @@ static volatile bool gl_cleanedUp = false;
 static SOCKET gl_serverSocket;
 static kv_store* gl_kvStore;
 /*** global variables end ***/
-
-/*** prototypes ***/
-void handleConnections(SOCKET serverSocket);
-SOCKET acceptClientConnection(SOCKET serverSocket, char *logBuffer,
-                              size_t logBufferSize);
-void handleAcceptError(char *logBuffer, size_t logBufferSize);
-int receiveData(SOCKET clientSocket, char *buffer, size_t bufferSize);
-void processClientRequest(SOCKET clientSocket, char *buffer, char *logBuffer,
-                          size_t logBufferSize);
-void handleGetRequest(SOCKET clientSocket, const char *key);
-void handlePutRequest(SOCKET clientSocket, const char *key, const char *value);
-void handleDelRequest(SOCKET clientSocket, const char *key);
-const char* parse_value(const char *after_key_ptr, struct kvstr_request *result);
-int kvstr_parse_request(const char *request_str, struct kvstr_request *result);
-const char *parse_operation(const char *request_str,
-                            struct kvstr_request *result);
-const char *parse_key(const char *after_op_ptr, struct kvstr_request *result);
-/*** protoypes end */
 
 void getCurrentTimeString(char *buffer) {
   time_t t = time(NULL);
