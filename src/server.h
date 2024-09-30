@@ -24,12 +24,10 @@ struct kvstr_request {
 
 /* Prototypes */
 void handleConnections(SOCKET serverSocket);
-SOCKET acceptClientConnection(SOCKET serverSocket, char *logBuffer,
-                              size_t logBufferSize);
+SOCKET acceptClientConnection(SOCKET serverSocket, char *logBuffer, size_t logBufferSize);
 void handleAcceptError(char *logBuffer, size_t logBufferSize);
 int receiveData(SOCKET clientSocket, char *buffer, size_t bufferSize);
-void processClientRequest(SOCKET clientSocket, char *buffer, char *logBuffer,
-                          size_t logBufferSize);
+void processClientRequest(SOCKET clientSocket, char *buffer, char *logBuffer, size_t logBufferSize);
 void handleGetRequest(SOCKET clientSocket, const char *key);
 void handlePutRequest(SOCKET clientSocket, const char *key, const char *value);
 void handleDelRequest(SOCKET clientSocket, const char *key);
@@ -37,5 +35,8 @@ const char* parse_value(const char *after_key_ptr, struct kvstr_request *result)
 int kvstr_parse_request(const char *request_str, struct kvstr_request *result);
 const char *parse_operation(const char *request_str, struct kvstr_request *result);
 const char *parse_key(const char *after_op_ptr, struct kvstr_request *result);
+struct kvstr_request* create_kvstr_request();
+void free_kvstr_request(struct kvstr_request** req_ptr);
+void setGlobalKVStore(void *kvstore);
 
 #endif

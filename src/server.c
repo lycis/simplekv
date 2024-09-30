@@ -7,8 +7,10 @@
 
 #define SKVS_SERVER
 
-
 #ifdef UNIT_TEST
+#include "utilfuns.h"
+
+/* very bad c mocking :) */
 const char* _mock_lastMessage = NULL;
 
 int mock_send(SOCKET socket, const char *buffer, size_t length, int flags) {
@@ -22,6 +24,14 @@ int mock_send(SOCKET socket, const char *buffer, size_t length, int flags) {
 
 #define send mock_send
 #endif
+
+/*** global variables start ***/
+static enum LogLevel gl_logLevel = INFO;
+static volatile bool gl_keepRunning = true;
+static volatile bool gl_cleanedUp = false;
+static SOCKET gl_serverSocket;
+kv_store* gl_kvStore;
+/*** global variables end ***/
 
 #define MAX_REQUEST_SIZE 5 * 1024 * 1024 // 5 MB buffer for requests
 
@@ -66,15 +76,6 @@ struct kvstr_request* create_kvstr_request() {
 
     return req;
 }
-
-
-/*** global variables start ***/
-static enum LogLevel gl_logLevel = INFO;
-static volatile bool gl_keepRunning = true;
-static volatile bool gl_cleanedUp = false;
-static SOCKET gl_serverSocket;
-static kv_store* gl_kvStore;
-/*** global variables end ***/
 
 void getCurrentTimeString(char *buffer) {
   time_t t = time(NULL);
@@ -601,7 +602,7 @@ void handleInterrupt(int signal) {
   cleanUp();
 }
 
-#ifndef UNIT_TEST
+#ifndef UNIT_TEST // in case of unit tests the server_unit_tests.c will be the entry point
 int main(int argc, char **argv) {
 #ifndef _WIN64
   printf("This program is only meant to be run on Windows 64-bit. Other OS are "
@@ -640,6 +641,4 @@ int main(int argc, char **argv) {
 #endif
   return 0;
 }
-#else
-#include "server_unit_tests.c"
 #endif

@@ -2,15 +2,18 @@
 #include <string.h>
 #include <stdio.h>
 #include <time.h>
+#include <stdlib.h>
+
+#ifdef _WIN64
+#include <WinSock2.h>
+#endif
+
 #include "kvstore.h"
+#include "server.h"
 
-#ifndef SKVS_SERVER
-#include "server.c"
-#endif
-
-#ifndef UNIT_TEST
-char* _mock_lastMessage = NULL;
-#endif
+// defined in server.c
+extern kv_store* gl_kvStore;
+extern const char* _mock_lastMessage;
 
 char* test_create_and_free_kvstr_request() {
     struct kvstr_request* req = create_kvstr_request();
@@ -632,8 +635,6 @@ char* test_kv_store_delete_nonexistent_key() {
     return NULL;
 }
 
-#ifdef UNIT_TEST
-// unit test execution
 int main(void) {
     cmunit_init();
 
@@ -687,4 +688,3 @@ int main(void) {
 
     return _cmunit_test_errors;
 }
-#endif

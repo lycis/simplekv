@@ -6,3 +6,4 @@ memtest_report.txt
 zig/
 zig.zip
 build_tools/
+dist/

@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "kvstore.h"
+#include "utilfuns.h"
 
 kv_store* create_kv_store(int initialCapcity) {
     kv_store* store = calloc(1, sizeof(kv_store));
@@ -32,27 +33,6 @@ int kv_store_resize( kv_store* store) {
     store->entries = new_entries;
     store->capacity = new_capacity;
     return 0;
-}
-
-char* duplicate_string(const char* str) {
-    if (str == NULL) {
-        return NULL;
-    }
-
-    size_t len = strlen(str);
-    char* dup = malloc(len + 1);
-    if (dup == NULL) {
-        return NULL;
-    }
-
-
-    errno_t err = strcpy_s(dup, len + 1, str);
-    if(err != 0) {
-        free(dup);
-        return NULL;
-    }
-
-    return dup;
 }
 
 int kv_store_put(kv_store* store, const char* key, const char* value) {
