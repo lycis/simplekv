@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 ZIG_VERSION=0.14.0
 ZIG_BUILD_ID=-dev.1694+3b465ebec
 BUILD_TOOLS="./build_tools"
