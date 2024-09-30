@@ -384,6 +384,8 @@ char* test_kv_store_case_sensitivity() {
     cmunit_assert("case-sensitive key retrieval failed for 'key'", strcmp(retrieved_value1, "value1") == 0);
     cmunit_assert("case-sensitive key retrieval failed for 'KEY'", strcmp(retrieved_value2, "value2") == 0);
 
+    free_kv_store(store);
+
     return NULL;
 }
 
