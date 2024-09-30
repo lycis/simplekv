@@ -32,38 +32,44 @@ To build and run this project, you will need:
 - A Windows environment
 - GCC (MinGW or any Windows-compatible GCC distribution)
 - Winsock library (`-lws2_32` for linking)
+- [Zig](https://www.ziglang.org) for building and experimental tests
 
 ## Installation & Compilation
-There are no dependencies other than the Winsock library (`-lws2_32`) for networking. So building is simple:
+There are no dependencies other than the Winsock library (`-lws2_32`) for networking. So building is quite simple.
 
-1. **Clone the repository:**
-    ```sh
-    git clone https://github.com/yourusername/simplekv.git
-    cd simplekv
-    ```
+### Full Build (with MSYS2 on Windows)
+If you have msys2 installed on your machine it is very easy. You can just execute the `ci-build.sh` script that will:
 
-2. **Building & running tests for the server:**
-    ```sh
-    gcc -DWIN64 -DUNIT_TEST -g server.c kvstore.c -o server_test -lws2_32
-    ./server_test
-    ```
+1. Download zig & drmemory
+2. Build the `server_test` binary
+3. Run the tests
+4. Run a memory leak analysis of the tests
+5. Build `./zig-out/bin/server`(the server binary) and `./zig-out/bin/client` (the example client binary)
 
-    When the `UNIT_TEST` build definition flag is given, the resulting binary will run the test suite of the server. Without it
-    the actual server will be built from the same sources.
+This script is reentrant and cleans up after itself. In case an error comes up, the error message should be kind of self-explanatory.
 
-    All tests should return as `passed` in order for the server to function correctly.
+### Building with `zig build`
+The project is set up to be built through `zig build`. To do that:
 
-3. **Compile the server:**
-    ```sh
-    gcc -DWIN64 -g server.c kvstore.c -o server_test -lws2_32
-    ```
+1. Download and install `zig` from [their website](https://www.ziglang.org/)
+2. Run `zig build` in the root folder of the project
 
-4. **Compile the client (optional):**
-    ```sh
-    gcc -o client client.c -lws2_32
-    ```
+The binaries will be built to `./zig-out/bin/`. To verify that everything is working as expected you can run the `server_test` binary that will execute a set of tests that should all pass.
 
-    The client is simple and self-contained in one source file and the protocol header `kvstrprotocol.h` only.
+### Building with `make`
+In additon, the project also provides a `Makefile`. By default it uses `zig cc` as compiler (see above). Running everything works with:
+
+```shell
+make all
+```
+
+This will run the tests implicitly. The build output is copied top the `dist` folder in this case.
+
+If you do not want to install and use `zig`, you can also build the project with `gcc` (which will require something line MinGW on windows!):
+
+```shell
+make CC="gcc" all
+```
 
 ## Usage
 See the [PROTOCOL](PROTOCOL.md) for a description of the communication protocol used between the `simplekv` server and any client.
