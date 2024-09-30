@@ -1,7 +1,4 @@
 #!/bin/bash
-
-set -x
-
 ZIG_VERSION=0.14.0
 ZIG_BUILD_ID=-dev.1694+3b465ebec
 BUILD_TOOLS="./build_tools"
@@ -47,6 +44,7 @@ run_tests() {
 }
 
 memory_analysis() {
+    echo "🩺 Running memory leak analysis ($test_file)..."
     ${BUILD_TOOLS}/drmemory/DrMemory-Windows-2.6.0/bin/drmemory -no_follow_children -light -count_leaks -brief -summary -batch -ignore_kernel -- "$test_file" > /dev/null 2>memtest_report.txt
     if grep -q "ERRORS FOUND:" memtest_report.txt; then
         echo "❌ DrMemory detected memory errors"
@@ -60,9 +58,7 @@ memory_analysis() {
 download_zig() {
     echo "⬇️ Downloading Zig..."
     wget -O zig.zip https://ziglang.org/builds/zig-windows-x86_64-${ZIG_VERSION}${ZIG_BUILD_ID}.zip > /dev/null 2>&1
-    ls -l
     unzip zig.zip > /dev/null 2>&1
-    ls -l
     mv zig-windows-x86_64-${ZIG_VERSION}${ZIG_BUILD_ID} ${BUILD_TOOLS}/zig
     if [ $? -ne 0 ]; then
         echo "❌ Failed to move downloade Zig to ${BUILD_TOOLS}/zig"
@@ -79,7 +75,6 @@ download_drmemory() {
     echo "⬇️ Downloading DrMemory..."
     wget -O drmemory.zip https://github.com/DynamoRIO/drmemory/releases/download/release_2.6.0/DrMemory-Windows-2.6.0.zip > /dev/null 2>&1
     unzip drmemory.zip -d ${BUILD_TOOLS}/drmemory > /dev/null 2>&1
-    echo "🩺 Running memory leak analysis ($test_file)..."
     rm drmemory.zip
     if [ $? -ne 0 ]; then
         echo "⚠️ Failed to remove drmemory.zip"
