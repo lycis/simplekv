@@ -16,11 +16,13 @@
         "options": {
           "cwd": "${fileDirname}"
         },
-        "problemMatcher": ["$gcc"],
+        "problemMatcher": [
+          "$gcc"
+        ],
         "group": {
           "kind": "build",
           "isDefault": true
-        },
+        }
       },
       {
         "type": "cppbuild",
@@ -37,11 +39,13 @@
         "options": {
           "cwd": "${fileDirname}"
         },
-        "problemMatcher": ["$gcc"],
+        "problemMatcher": [
+          "$gcc"
+        ],
         "group": {
           "kind": "build",
           "isDefault": true
-        },
+        }
       },
       {
         "type": "cppbuild",
@@ -52,16 +56,18 @@
           "-g",
           "${workspaceFolder}\\cmunit_example.c",
           "-o",
-          "${workspaceFolder}\\dist\\\\cmunit_example.exe",
+          "${workspaceFolder}\\dist\\\\cmunit_example.exe"
         ],
         "options": {
           "cwd": "${fileDirname}"
         },
-        "problemMatcher": ["$gcc"],
+        "problemMatcher": [
+          "$gcc"
+        ],
         "group": {
           "kind": "build",
           "isDefault": true
-        },
+        }
       },
       {
         "type": "cppbuild",
@@ -78,16 +84,26 @@
           "${workspaceFolder}\\src\\utilfuns.c",
           "${workspaceFolder}\\src\\server_unit_tests.c",
           "-o",
-          "${workspaceFolder}\\dist\\\\server_test.exe",
+          "${workspaceFolder}\\dist\\\\server_test.exe"
         ],
         "options": {
           "cwd": "${fileDirname}"
         },
-        "problemMatcher": ["$gcc"],
+        "problemMatcher": [
+          "$gcc"
+        ],
         "group": {
           "kind": "build",
           "isDefault": true
-        },
+        }
+      },
+      {
+        "label": "zig: build tests",
+        "type": "shell",
+        "command": "zig test --test-no-exec -femit-bin='zig-out/bin/server-zig-test.exe' -fno-strip -O Debug -DUNIT_TEST -lc -lws2_32 -idirafter.\\src\\ .\\test\\server_test.zig .\\src\\kvstore.c .\\src\\server.c .\\src\\utilfuns.c",
+        "problemMatcher": [
+          "$zig"
+        ]
       }
     ],
     "version": "2.0.0"

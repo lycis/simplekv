@@ -103,6 +103,14 @@
           }
         ],
         "preLaunchTask": "build: server unit test"
+      }, 
+      {
+        "name": "zig: Debug Tests",
+        "type": "cppvsdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}\\zig-out\\bin\\server-zig-test.exe",
+        "preLaunchTask": "zig: build tests",
+        "cwd": "${workspaceFolder}"
       }
     ],
     "version": "2.0.0"
