@@ -1,0 +1,4 @@
+{
+    "zig.zls.warnStyle": true,
+    "zig-language-extras.testArgs": "-fno-strip -O Debug -DUNIT_TEST -lc -lws2_32 -idirafter .\\src\\ .\\src\\kvstore.c .\\src\\server.c .\\src\\utilfuns.c"
+}
