@@ -368,6 +368,7 @@ char* test_kv_store_resizable() {
     kv_store_put(store, "key3", "value3");
     const char* retrieved_value = kv_store_get(store, "key3");
     cmunit_assert("store did not expand properly", strcmp(retrieved_value, "value3") == 0);
+    cmunit_assert("store did not increase capacity", store->capacity > 2);
 
     free_kv_store(store);
 
