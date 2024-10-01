@@ -138,3 +138,18 @@ test "kvstore: resize key value store when growing over capacity" {
     const capacity = store.*.capacity;
     try std.testing.expectEqual(4, capacity);
 } 
+
+test "kvstore: keys are case sensitive" {
+    const store = ckvstore.create_kv_store(1);
+    try std.testing.expect(store != null);
+    defer ckvstore.free_kv_store(store);
+
+    _ = ckvstore.kv_store_put(store, "key", "value");
+    _ = ckvstore.kv_store_put(store, "KEY", "VALUE");
+
+    const lowercase = ckvstore.kv_store_get(store, "key");
+    try std.testing.expectEqualStrings(std.mem.span(lowercase), "value");
+
+    const uppercase = ckvstore.kv_store_get(store, "KEY");
+    try std.testing.expectEqualStrings(std.mem.span(uppercase), "VALUE");
+}
