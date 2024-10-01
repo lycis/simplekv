@@ -35,7 +35,7 @@ run_tests() {
     local test_file=$1
 
     echo "⚙️ Running tests..."
-    ./"$test_file"
+    ${BUILD_TOOLS}/zig/zig build test --summary all
     if [ $? -ne 0 ]; then
         echo "❌ Unit tests failed"
         exit 1
@@ -96,8 +96,8 @@ build() {
 download_zig
 download_drmemory
 
+run_tests
 build
-run_tests "zig-out/bin/server_test.exe"
 memory_analysis "zig-out/bin/server_test.exe"
 
 echo "✅ All builds successful!"
